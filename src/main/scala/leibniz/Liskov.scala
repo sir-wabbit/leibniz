@@ -125,13 +125,6 @@ object Liskov {
   def reify[A, B >: A]: A <~< B = id
 
   /**
-    * Subtyping is a transitive relation and its witnesses can be composed
-    * in a chain much like functions.
-    */
-  def trans[A, B, C](bc: B <~< C, ab: A <~< B): A <~< C =
-    ab.andThen(bc)
-
-  /**
     * Subtyping is antisymmetric in theory (and in Dotty). Notice that this is
     * not true in Scala until [[https://issues.scala-lang.org/browse/SI-7278
     * SI-7278]] is fixed, so this function is marked unsafe.
