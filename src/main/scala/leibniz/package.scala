@@ -1,4 +1,7 @@
 package object leibniz {
+  type ⊥ = Nothing
+  type ⊤ = Any
+
   type ∀[F[_]] = Forall[F]
   type ∃[F[_]] = Exists[F]
 
