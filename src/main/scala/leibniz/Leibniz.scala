@@ -99,7 +99,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
   /**
     * Given `A === B` and `I === J` we can prove that `F[A, I] === F[B, J]`.
     *
-    * This method allows you to compose two `Leibniz` values in an infix
+    * This method allows you to compose two `Leibniz` values in infix
     * manner:
     * {{{
     *   def either(ab: A === B, ij: I === J): Either[A, I] === Either[B, J] =
@@ -152,22 +152,17 @@ object Leibniz {
   def refl[A]: A === A = unsafeForce[A, A]
 
   /**
-    * Equality is symmetric and therefore can be flipped around.
-    *
-    * @see [[Leibniz.flip]]
-    */
-  def symm[A, B](ab: A === B): B === A =
-    ab.flip
-
-  /**
     * Given `A === B` we can prove that `F[A] === F[B]`.
     *
     * @see [[lift2]]
     * @see [[lift3]]
     */
   def lift[F[_], A, B]
-  (ab: A === B): F[A] === F[B] =
-    ab.subst[λ[α => F[A] === F[α]]](refl)
+  (ab: A === B): F[A] === F[B] = {
+    type f[α] = F[A] === F[α]
+    ab.subst[f](refl)
+  }
+
 
   /**
     * Given `A === B` and `I === J` we can prove that `F[A, I] === F[B, J]`.
@@ -176,10 +171,11 @@ object Leibniz {
     * @see [[lift3]]
     */
   def lift2[F[_, _], A, B, I, J]
-  (ab: A === B, ij: I === J): F[A, I] === F[B, J] =
-    ij.subst[λ[α => F[A, I] === F[B, α]]](
-      ab.subst[λ[α => F[A, I] === F[α, I]]](
-        refl[F[A, I]]))
+  (ab: A === B, ij: I === J): F[A, I] === F[B, J] = {
+    type f1[α] = F[A, I] === F[α, I]
+    type f2[α] = F[A, I] === F[B, α]
+    ij.subst[f2](ab.subst[f1](refl))
+  }
 
   /**
     * Given `A === B`, `I === J`, and `M === N` we can prove that
@@ -189,11 +185,12 @@ object Leibniz {
     * @see [[lift2]]
     */
   def lift3[F[_, _, _], A, B, I, J, M, N]
-  (ab: A === B, ij: I === J, mn: M === N): F[A, I, M] === F[B, J, N] =
-    mn.subst[λ[α => F[A, I, M] === F[B, J, α]]](
-      ij.subst[λ[α => F[A, I, M] === F[B, α, M]]](
-        ab.subst[λ[α => F[A, I, M] === F[α, I, M]]](
-          refl[F[A, I, M]])))
+  (ab: A === B, ij: I === J, mn: M === N): F[A, I, M] === F[B, J, N] = {
+    type f1[α] = F[A, I, M] === F[α, I, M]
+    type f2[α] = F[A, I, M] === F[B, α, M]
+    type f3[α] = F[A, I, M] === F[B, J, α]
+    mn.subst[f3](ij.subst[f2](ab.subst[f1](refl)))
+  }
 
   /**
     * It can be convenient to convert a [[=:=]] value into a `Leibniz` value.
