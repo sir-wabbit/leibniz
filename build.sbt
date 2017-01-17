@@ -14,7 +14,7 @@ lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   organization := "com.alexknvl",
-  version := "0.1.0",
+  version := "0.2.0",
   scalaVersion := "2.12.1",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
   scalacOptions ++= List(
@@ -33,6 +33,7 @@ lazy val commonSettings = List(
   wartremoverWarnings ++= Warts.all
 )
 
-lazy val root = (project in file(".")).
-  settings(name := "leibniz").
-  settings(commonSettings: _*)
+lazy val root = (project in file("."))
+  .settings(name := "leibniz")
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= catsLibraries)
