@@ -1,10 +1,7 @@
-# Leibniz
+# Leibniz Scala Library
 
-Leibniz equivalence and Liskov substitutability library for Scala.
-
-## Leibniz
-The Leibnitz’ equality law states that if `a` and `b` are identical then they
-must have identical properties. Leibnitz’ original definition reads as follows:
+The Leibniz’ equality law states that if `a` and `b` are identical then they
+must have identical properties. Leibniz’ original definition reads as follows:
 ```
 a ≡ b = ∀ f .f a ⇔ f b
 ```
@@ -13,48 +10,34 @@ and can be proven to be equivalent to:
 a ≡ b = ∀ f .f a → f b
 ```
 
-In Scala we can encode this law as:
-```scala
-trait Leibniz[A, B] {
-  def subst[F[_]](fa: F[A]): F[B]
-}
-```
+This library provides an encoding of Leibniz' equality and other related
+concepts in Scala.
 
-The `Leibniz` data type then encodes true type equality, since the identity
-function is the only non-diverging conversion function that can be used
-as an implementation of the `subst` method assuming that we do not break
-parametricity. As the substitution function has to work for any `F[_]`, it
-cannot make assumptions about the structure of `F[_]`, making it impossible
-to construct a value of type `F[A]` or to access values of type `A` that
-may be stored inside a value of type `F[A]`. Hence it is impossible for
-a substitution function to alter the value it takes as argument.
-
-Not taking into account the partial functions that never terminate
-(infinite loops), functions returning `null`, or throwing exceptions,
-the identity function is the only function that can be used in place of
-`subst` to construct a value of type `Leibniz[A, B]`.
-
-The existence of a value of type `Leibniz[A, B]` now implies that a ≡ b,
-since the conversion function, that converts an `A` into a `B`, must be
-the identity function.
-
-This technique was first used in [Typing Dynamic Typing](http://portal.acm.org/citation.cfm?id=583852.581494) (Baars and Swierstra, ICFP 2002).
-
-You can find some further examples [here](http://typelevel.org/blog/2014/09/20/higher_leibniz.html).
-
-
-## Liskov
-
-`Liskov[A, B]` witnesses that `A` can be used in any negative context
-that expects a `B`. (e.g. if you could pass an `A` into any function
-that expects a `B`.)
-
-TODO: Expand on this.
+### Witnesses
+ * `Leibniz[A, B]` (with a type alias to `A === B`) witnesses that types
+   `A` and `B` are exactly the same.
+ * Similarly, `LeibnizK[A, B]` (with a type alias to `A =~= B`) witnesses
+   that types `A[_]` and `B[_]` are exactly the same. Combinators exist that
+   allow you to prove that `F[A] === F[B]` for any `F[_[_]]` or that
+   `A[X] === B[X]` for any `X`.
+ * `BoundedLeibniz[L, H, A, B]` witnesses that types `A` and `B` are the same
+   and that they both are in between types `L` and `H`.
+ * `Liskov[A, B]` witnesses that `A` can be used in any negative context
+   that expects a `B`. (e.g. if you could pass an `A` into any function
+   that expects a `B`.)
+ * `Exists[F[_]]` witnesses that there exists some type `A` and a value of
+   type `F[A]`. For instance, if you want to witness that a some type
+   `T` has an instance of `Show[T]`, you can provide
+   `Exists[λ[α => (α, Show[α])]]`.
+ * `Forall[F[_]]` is a universal quantification encoded as a type in Scala.
+   If you want to witness that some type `F[_]` has a monoid instance
+   regardless of the type argument, you can provide
+   `Forall[λ[α => Monoid[F[α]]]]`.
 
 ## Quick Start
 ```scala
 resolvers += Resolver.bintrayRepo("alexknvl", "maven")
-libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.1"
+libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.2"
 ```
 
 ## License
