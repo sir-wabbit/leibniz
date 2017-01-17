@@ -36,12 +36,12 @@ import Leibniz.refl
   * @see [[http://typelevel.org/blog/2014/09/20/higher_leibniz.html
   *        Higher Leibniz]]
   */
-sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
+final case class Leibniz[A, B] private[Leibniz] (withBounds: BoundedLeibniz[⊥, ⊤, A, B])  { ab =>
   /**
     * To create an instance of `Leibniz[A, B]` you must show that for every
     * choice of `F[_]` you can convert `F[A]` to `F[B]`.
     */
-  def subst[F[_]](fa: F[A]): F[B]
+  def subst[F[_]](fa: F[A]): F[B] = withBounds.subst(fa)
 
   /**
     * Substitution on identity brings about a direct coercion function of the
@@ -49,8 +49,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     *
     * @see [[coerce]]
     */
-  final def apply(a: A): B =
-    coerce(a)
+  def apply(a: A): B = withBounds.coerce(a)
 
   /**
     * Substitution on identity brings about a direct coercion function of the
@@ -58,8 +57,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     *
     * @see [[apply]]
     */
-  final def coerce(a: A): B =
-    subst[λ[α => α]](a)
+  def coerce(a: A): B = withBounds.coerce(a)
 
   /**
     * Equality is transitive relation and its witnesses can be composed
@@ -67,7 +65,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     *
     * @see [[compose]]
     */
-  final def andThen[C](bc: B === C): A === C =
+  def andThen[C](bc: B === C): A === C =
     bc.subst[A === ?](ab)
 
   /**
@@ -76,14 +74,14 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     *
     * @see [[andThen]]
     */
-  final def compose[Z](za: Z === A): Z === B =
+  def compose[Z](za: Z === A): Z === B =
     za.andThen(ab)
 
   /**
     * Equality is symmetric relation and therefore can be flipped around.
     * Flipping is its own inverse, so `x.flip.flip == x`.
     */
-  final def flip: B === A =
+  def flip: B === A =
     subst[? === A](refl)
 
 
@@ -93,7 +91,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     * @see [[Leibniz.lift]]
     * @see [[Leibniz.lift2]]
     */
-  final def lift[F[_]]: F[A] === F[B] =
+  def lift[F[_]]: F[A] === F[B] =
     Leibniz.lift(ab)
 
   /**
@@ -110,7 +108,7 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
     * @see [[Leibniz.lift2]]
     * @see [[Leibniz.lift3]]
     */
-  final def lift2[F[_, _]]: PartiallyAppliedLift2[F] =
+  def lift2[F[_, _]]: PartiallyAppliedLift2[F] =
     new PartiallyAppliedLift2[F]
   final class PartiallyAppliedLift2[F[_, _]] {
     def apply[I, J](ij: I === J): F[A, I] === F[B, J] =
@@ -120,22 +118,20 @@ sealed abstract class Leibniz[A, B] private[Leibniz] () { ab =>
   /**
     * Given `A === B` we can convert `(X => A)` into `(X => B)`.
     */
-  final def onF[X](fa: X => A): X => B =
+  def onF[X](fa: X => A): X => B =
     subst[X => ?](fa)
 
   /**
     * A value `Leibniz[A, B]` is always sufficient to produce a similar [[=:=]]
     * value.
     */
-  final def toPredef: A =:= B =
+  def toPredef: A =:= B =
     subst[A =:= ?](implicitly[A =:= A])
 }
 
 object Leibniz {
-  private[this] final case class Refl[A]() extends Leibniz[A, A] {
-    def subst[F[_]](fa: F[A]): F[A] = fa
-  }
-  private[this] val anyRefl: Any === Any = Refl[Any]()
+  private[this] val anyRefl: Any === Any =
+    Leibniz[Any, Any](BoundedLeibniz.refl[Any])
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
@@ -149,7 +145,8 @@ object Leibniz {
   /**
     * Equality is reflexive relation.
     */
-  def refl[A]: A === A = unsafeForce[A, A]
+  def refl[A]: A === A =
+    unsafeForce[A, A]
 
   /**
     * Given `A === B` we can prove that `F[A] === F[B]`.
