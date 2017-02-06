@@ -122,7 +122,7 @@ object Liskov {
   /**
     * Reify Scala's subtyping relationship into an evidence value.
     */
-  def reify[A, B >: A]: A <~< B = id
+  implicit def reify[A, B >: A]: A <~< B = id
 
   /**
     * Subtyping is antisymmetric in theory (and in Dotty). Notice that this is
