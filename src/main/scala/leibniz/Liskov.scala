@@ -1,6 +1,6 @@
 package leibniz
 
-import Liskov.id
+import Liskov._
 
 /**
   * Liskov substitutability: A better `<:<`.
@@ -13,6 +13,9 @@ import Liskov.id
   */
 sealed abstract class Liskov[-A, +B] private[Liskov] () { ab =>
   def subst[F[-_]](fb: F[B]): F[A]
+  def fix[A1 <: A, B1 >: B]: Fix[A1, B1]
+  def fixL[A1 <: A]: FixL[A1, B]
+  def fixU[B1 >: B]: FixU[A, B1]
 
   /**
     * Substitution into a contravariant context.
@@ -103,6 +106,23 @@ sealed abstract class Liskov[-A, +B] private[Liskov] () { ab =>
 object Liskov {
   private[this] final case class Refl[A]() extends Liskov[A, A] {
     def subst[F[-_]](fa: F[A]): F[A] = fa
+
+    def fix[A1 <: A, B1 >: A]: Fix[A1, B1] = new Fix[A1, B1] {
+      type Lower = A1
+      type Upper = B1
+      def lower: A1 === A1 = Leibniz.refl
+      def upper: B1 === B1 = Leibniz.refl
+    }
+
+    def fixL[A1 <: A]: FixL[A1, A] = new FixL[A1, A] {
+      type Type = A1
+      def proof: A1 === A1 = Leibniz.refl
+    }
+
+    def fixU[B1 >: A]: FixU[A, B1] = new FixU[A, B1] {
+      type Type = B1
+      def proof: B1 === B1 = Leibniz.refl
+    }
   }
   private[this] val anyRefl: Any <~< Any = Refl[Any]()
 
@@ -140,4 +160,21 @@ object Liskov {
     */
   def unsafeFromPredef[A, B](eq: A <:< B): A <~< B =
     unsafeForce[A, B]
+
+  trait Fix[A, B] {
+    type Lower
+    type Upper >: Lower
+    def lower: A === Lower
+    def upper: B === Upper
+  }
+
+  trait FixL[A, +B] {
+    type Type <: B
+    def proof: A === Type
+  }
+
+  trait FixU[-A, B] {
+    type Type >: A
+    def proof: B === Type
+  }
 }
