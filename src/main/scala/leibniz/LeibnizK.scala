@@ -6,7 +6,7 @@ import cats.~>
 
 /**
   * The existence of a value of type `LeibnizK[A[_], B[_]]` implies that A ≡ B.
-  * For an explanation see [[Leibniz]].
+  * For an explanation see [[Is]].
   *
   * @see [[=~=]] `A =~= B` is a type synonym to `LeibnizK[A, B]`
   */
@@ -144,7 +144,7 @@ object LeibnizK {
   def lower[F[_[_]], A[_], B[_]]
   (ab: A =~= B): F[A] === F[B] = {
     type f[α[_]] = F[A] === F[α]
-    ab.subst[f](Leibniz.refl)
+    ab.subst[f](Is.refl)
   }
 
   /**
@@ -158,7 +158,7 @@ object LeibnizK {
   (ab: A =~= B, ij: I =~= J): F[A, I] === F[B, J] = {
     type f1[α[_]] = F[A, I] === F[α, I]
     type f2[α[_]] = F[A, I] === F[B, α]
-    ij.subst[f2](ab.subst[f1](Leibniz.refl))
+    ij.subst[f2](ab.subst[f1](Is.refl))
   }
 
   /**
@@ -173,7 +173,7 @@ object LeibnizK {
     type f1[α[_]] = F[A, I, M] === F[α, I, M]
     type f2[α[_]] = F[A, I, M] === F[B, α, M]
     type f3[α[_]] = F[A, I, M] === F[B, J, α]
-    mn.subst[f3](ij.subst[f2](ab.subst[f1](Leibniz.refl)))
+    mn.subst[f3](ij.subst[f2](ab.subst[f1](Is.refl)))
   }
 
   /**
