@@ -78,7 +78,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
   }
 
   /**
-    * Given `A <~< B` we can prove that `F[B] <~< F[B]` for any
+    * Given `A <~< B` we can prove that `F[A] <~< F[B]` for any
     * contravariant `F[-_]`.
     *
     * @see [[liftCo]]
