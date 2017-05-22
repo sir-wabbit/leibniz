@@ -36,6 +36,8 @@ object As1 {
 
   def refl[A]: A As1 A = new Refl[A]()
 
+  implicit def fix[A, B](implicit ab: A As B): A As1 B = ab.fix[A, B]
+
   def proved[A, B, B1 >: A, A1 <: (B with B1)](a: A Is A1, b: B Is B1): As1[A, B] = new As1[A, B] {
     type Upper = B1
     type Lower = A1

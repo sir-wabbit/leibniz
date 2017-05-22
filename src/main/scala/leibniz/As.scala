@@ -96,6 +96,9 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     type f[-α] = α <:< B
     substCt[f](implicitly[B <:< B])
   }
+
+//  final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+//    Liskov.unsafeForce[L, H, ~[A], ~[B]]
 }
 
 object As {
@@ -118,7 +121,7 @@ object As {
   /**
     * Subtyping relation is reflexive.
     */
-  def refl[A]: A As A = unsafeForce[A, A]
+  implicit def refl[A]: A As A = unsafeForce[A, A]
 
   /**
     * Reify Scala's subtyping relationship into an evidence value.
@@ -153,6 +156,12 @@ object As {
       liftCo[F].apply(value)
     def substCt[F[-_, -_]](value: F[B1, B2]): F[A1, A2] =
       liftCt[F].apply(value)
+  }
+
+  // HACK: This is ridiculously hacky.
+  implicit class AsOps[A, B](val ab: As[A, B]) extends AnyVal {
+    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+      Liskov.unsafeForce[L, H, ~[A], ~[B]]
   }
 
   /**

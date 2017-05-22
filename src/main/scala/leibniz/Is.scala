@@ -202,6 +202,12 @@ object Is {
     mn.subst[f3](ij.subst[f2](ab.subst[f1](refl)))
   }
 
+  // HACK: This is ridiculously hacky.
+  implicit class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
+    final def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
+      Leibniz.unsafeForce[L, H, ~[A], ~[B]]
+  }
+
   /**
     * It can be convenient to convert a [[=:=]] value into a `Leibniz` value.
     * This is not strictly valid as while it is almost certainly true that

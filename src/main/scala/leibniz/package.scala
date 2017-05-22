@@ -1,3 +1,5 @@
+import scala.annotation.unchecked.{uncheckedVariance => uV}
+
 package object leibniz {
   type ⊥ = Nothing
   type ⊤ = Any
@@ -16,4 +18,6 @@ package object leibniz {
   // type :<|[T <: F, +H] = Bounded[F#_1, F#_2, H]
 
   // type F = Nothing |:< Int :<| AnyVal
+
+  type ~[-A] = A @uV
 }
