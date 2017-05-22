@@ -1,12 +1,23 @@
 package leibniz
 
 import cats.Functor
+import cats.functor.Contravariant
+import cats.functor.Invariant
 
 import scala.{ specialized => sp }
 
 trait Iso[A, @sp B] { ab =>
   def to(a: A): B
   def from(b: B): A
+
+  def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+    F.map(fa)(to)
+
+  def substCtF[F[_]](fa: F[A])(implicit F: Contravariant[F]): F[B] =
+    F.contramap(fa)(from)
+
+  def substF[F[_]](fa: F[A])(implicit F: Invariant[F]): F[B] =
+    F.imap(fa)(to)(from)
 
   def andThen[C](bc: Iso[B, C]): Iso[A, C] = new Iso[A, C] {
     def to(a: A): C = bc.to(ab.to(a))

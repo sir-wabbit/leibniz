@@ -109,6 +109,11 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
 //    def apply[I, J](ij: I === J): F[A, I] === F[B, J] =
 //      Is.lift2(ab, ij)
 //  }
+
+  def toIs: Is[A, B] = {
+    type f[x <: F[x]] = Is[A, x]
+    subst[f](Is.refl[A])
+  }
 }
 
 object IsF {

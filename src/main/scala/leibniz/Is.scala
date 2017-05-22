@@ -125,11 +125,21 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     subst[X => ?](fa)
 
   /**
-    * A value `Leibniz[A, B]` is always sufficient to produce a similar [[=:=]]
+    * A value `A === B` is always sufficient to produce a similar [[=:=]]
     * value.
     */
   def toPredef: A =:= B =
     subst[A =:= ?](implicitly[A =:= A])
+
+  /**
+    * A value `A === B` is always sufficient to produce a `Iso[A, B]`
+    * value.
+    */
+  def toIso: Iso[A, B] =
+    subst[Iso[A, ?]](Iso.id[A])
+
+  def toAs: As[A, B] =
+    subst[As[A, ?]](As.refl[A])
 }
 
 object Is {
@@ -202,6 +212,8 @@ object Is {
   implicit class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
     final def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
       Leibniz.unsafeForce[L, H, ~[A], ~[B]]
+    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+      Liskov.unsafeForce[L, H, ~[A], ~[B]]
   }
 
   /**

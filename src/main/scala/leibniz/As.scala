@@ -1,5 +1,8 @@
 package leibniz
 
+import cats.Functor
+import cats.functor.Contravariant
+
 /**
   * Liskov substitutability: A better `<:<`.
   *
@@ -158,11 +161,25 @@ object As {
       liftCt[F].apply(value)
   }
 
-  // HACK: This is ridiculously hacky.
-  import hacks._
   implicit class AsOps[A, B](val ab: As[A, B]) extends AnyVal {
+    // HACK: This is ridiculously hacky.
+    import hacks._
     final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
+
+    /**
+      * `F.map(fa)(ab.coerce)`
+      */
+    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+      fa.asInstanceOf[F[B]]
+
+    /**
+      * `F.contramap(fb)(ab.coerce)`
+      */
+    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+    def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
+      fb.asInstanceOf[F[A]]
   }
 
   /**
