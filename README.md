@@ -14,17 +14,19 @@ This library provides an encoding of Leibniz' equality and other related
 concepts in Scala.
 
 ### Witnesses
- * `Leibniz[A, B]` (with a type alias to `A === B`) witnesses that types
+ * `Is[A, B]` (with a type alias to `A === B`) witnesses that types
    `A` and `B` are exactly the same.
- * Similarly, `LeibnizK[A, B]` (with a type alias to `A =~= B`) witnesses
+ * Similarly, `IsK[A, B]` (with a type alias to `A =~= B`) witnesses
    that types `A[_]` and `B[_]` are exactly the same. Combinators exist that
    allow you to prove that `F[A] === F[B]` for any `F[_[_]]` or that
    `A[X] === B[X]` for any `X`.
- * `BoundedLeibniz[L, H, A, B]` witnesses that types `A` and `B` are the same
+ * `Leibniz[L, H, A, B]` witnesses that types `A` and `B` are the same
    and that they both are in between types `L` and `H`.
- * `Liskov[A, B]` witnesses that `A` can be used in any negative context
-   that expects a `B`. (e.g. if you could pass an `A` into any function
-   that expects a `B`.)
+ * `Is[F, A, B]` witnesses type-equality for F-Bounded types.
+ * `As[A, B]` witnesses that `A` is a subtype of `B`.
+ * `As1[A, B]` witnesses that `A` is a subtype of `B` using existential types.
+ * `Liskov[L, H, A, B]` is a bounded counterpart to `As[A, B]`.
+ ---
  * `Exists[F[_]]` witnesses that there exists some type `A` and a value of
    type `F[A]`. For instance, if you want to witness that a some type
    `T` has an instance of `Show[T]`, you can provide
@@ -37,7 +39,7 @@ concepts in Scala.
 ## Quick Start
 ```scala
 resolvers += Resolver.bintrayRepo("alexknvl", "maven")
-libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.3.0"
+libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.3.1"
 ```
 
 ## License
