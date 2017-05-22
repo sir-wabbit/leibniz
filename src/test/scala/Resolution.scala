@@ -91,5 +91,5 @@ object Resolution {
   implicitly[Nothing Iso Nothing]
   implicitly[Any Iso Any]
 
-  
+
 }

@@ -2,26 +2,26 @@ package leibniz
 
 import cats.~>
 
-trait Exists[F[_]] { fa =>
-  type A
-  def apply: F[A]
+sealed trait Exists[F[_]] { fa =>
+  import Exists._
 
-  def mapK[G[_]](fg: F ~> G): ∃[G] =
-    new ∃[G] {
-      type A = fa.A
-      def apply: G[fa.A] = fg.apply(fa.apply)
-    }
+  type Type
+  def value: F[Type]
+
+  def mapK[G[_]](fg: F ~> G): Exists[G] =
+    MkExists(fg.apply(value))
 
   def fold[Z](f: F ~> λ[α => Z]): Z =
-    f.apply(fa.apply)
+    f.apply(fa.value)
 
-  def toScala: F[A] forSome { type A } = apply
+  def toScala: F[A] forSome { type A } = value
+
+  override def toString = value.toString
 }
 object Exists {
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def fromScala[F[_]](fa: F[X] forSome { type X }): ∃[F] =
-    new ∃[F] {
-      type A = Any
-      def apply: F[Any] = fa.asInstanceOf[F[Any]]
-    }
+  private final case class MkExists[F[_], A](val value: F[A]) extends Exists[F] {
+    type Type = A
+  }
+
+  def fromScala[F[_]](fa: F[X] forSome { type X }): Exists[F] = MkExists(fa)
 }
