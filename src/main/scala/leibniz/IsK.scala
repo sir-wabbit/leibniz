@@ -1,6 +1,6 @@
 package leibniz
 
-import LeibnizK.refl
+import IsK.refl
 import cats.arrow.FunctionK
 import cats.~>
 
@@ -10,7 +10,7 @@ import cats.~>
   *
   * @see [[=~=]] `A =~= B` is a type synonym to `LeibnizK[A, B]`
   */
-sealed abstract class LeibnizK[A[_], B[_]] private[LeibnizK] () { ab =>
+sealed abstract class IsK[A[_], B[_]] private[IsK]() { ab =>
   /**
     * To create an instance of `LeibnizK[A[_], B[_]]` you must show that
     * for every choice of `F[_[_]]` you can convert `F[A]` to `F[B]`.
@@ -62,48 +62,48 @@ sealed abstract class LeibnizK[A[_], B[_]] private[LeibnizK] () { ab =>
   /**
     * Given `A =~= B` we can prove that `F[A] === F[B]`.
     *
-    * @see [[LeibnizK.lower]]
-    * @see [[LeibnizK.lower2]]
+    * @see [[IsK.lower]]
+    * @see [[IsK.lower2]]
     */
   final def lower[F[_[_]]]: F[A] === F[B] =
-    LeibnizK.lower(ab)
+    IsK.lower(ab)
 
   /**
     * Given `A =~= B` and `I =~= J` we can prove that `F[A, I] === F[B, J]`.
     *
-    * @see [[LeibnizK.lower]]
-    * @see [[LeibnizK.lower2]]
-    * @see [[LeibnizK.lower3]]
+    * @see [[IsK.lower]]
+    * @see [[IsK.lower2]]
+    * @see [[IsK.lower3]]
     */
   final def lower2[F[_[_], _[_]]]: PartiallyAppliedLower2[F] =
     new PartiallyAppliedLower2[F]
   final class PartiallyAppliedLower2[F[_[_], _[_]]] {
     def apply[I[_], J[_]](ij: I =~= J): F[A, I] === F[B, J] =
-      LeibnizK.lower2(ab, ij)
+      IsK.lower2(ab, ij)
   }
 
   /**
     * Given `A =~= B` we can prove that `F[A, ?] =~= F[B, ?]`.
     *
-    * @see [[LeibnizK.lift]]
-    * @see [[LeibnizK.lift2]]
+    * @see [[IsK.lift]]
+    * @see [[IsK.lift2]]
     */
   final def lift[F[_[_], _]]: F[A, ?] =~= F[B, ?] =
-    LeibnizK.lift(ab)
+    IsK.lift(ab)
 
   /**
     * Given `A =~= B` and `I =~= J` we can prove that
     * `F[A, I, ?] =~= F[B, J, ?]`.
     *
-    * @see [[LeibnizK.lift]]
-    * @see [[LeibnizK.lift2]]
-    * @see [[LeibnizK.lift3]]
+    * @see [[IsK.lift]]
+    * @see [[IsK.lift2]]
+    * @see [[IsK.lift3]]
     */
   final def lift2[F[_[_], _[_], _]]: PartiallyAppliedLift2[F] =
     new PartiallyAppliedLift2[F]
   final class PartiallyAppliedLift2[F[_[_], _[_], _]] {
     def apply[I[_], J[_]](ij: I =~= J): F[A, I, ?] =~= F[B, J, ?] =
-      LeibnizK.lift2(ab, ij)
+      IsK.lift2(ab, ij)
   }
 
   /**
@@ -115,10 +115,10 @@ sealed abstract class LeibnizK[A[_], B[_]] private[LeibnizK] () { ab =>
   }
 }
 
-object LeibnizK {
-  def apply[A[_], B[_]](implicit ab: LeibnizK[A, B]): LeibnizK[A, B] = ab
+object IsK {
+  def apply[A[_], B[_]](implicit ab: IsK[A, B]): IsK[A, B] = ab
 
-  final case class Refl[A[_]]() extends LeibnizK[A, A] {
+  final case class Refl[A[_]]() extends IsK[A, A] {
     def subst[F[_[_]]](fa: F[A]): F[A] = fa
   }
   private[this] val anyRefl: Any =~= Any = Refl[Any]()
