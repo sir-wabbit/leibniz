@@ -1,7 +1,5 @@
 package leibniz
 
-import As._
-
 /**
   * Liskov substitutability: A better `<:<`.
   *
@@ -12,6 +10,8 @@ import As._
   * @see [[<~<]] `A <~< B` is a type synonym to `A As B`
   */
 sealed abstract class As[-A, +B] private[As]() { ab =>
+  import As._
+
   def fix[A1 <: A, B1 >: B]: As1[A1, B1]
 
   /**
@@ -159,6 +159,7 @@ object As {
   }
 
   // HACK: This is ridiculously hacky.
+  import hacks._
   implicit class AsOps[A, B](val ab: As[A, B]) extends AnyVal {
     final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]

@@ -1,7 +1,5 @@
 package leibniz
 
-import Is.refl
-
 /**
   * The data type `Is` is the encoding of Leibnitz’ law which states that
   * if `a` and `b` are identical then they must have identical properties.
@@ -37,6 +35,8 @@ import Is.refl
   *        Higher Leibniz]]
   */
 sealed abstract class Is[A, B] private[Is]()  { ab =>
+  import Is._
+
   /**
     * To create an instance of `Is[A, B]` you must show that for every
     * choice of `F[_]` you can convert `F[A]` to `F[B]`.
@@ -203,6 +203,7 @@ object Is {
   }
 
   // HACK: This is ridiculously hacky.
+  import hacks._
   implicit class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
     final def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
       Leibniz.unsafeForce[L, H, ~[A], ~[B]]
