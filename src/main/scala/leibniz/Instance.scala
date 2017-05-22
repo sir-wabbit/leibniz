@@ -27,7 +27,11 @@ object Instance {
     val second: F[A] = tuple._2
   }
 
-  def fromScala[F[_]](fa: (X, F[X]) forSome { type X }): Instance[F] = MkInstance(fa)
+  def fromScala[F[_]](fa: (X, F[X]) forSome { type X }): Instance[F] =
+    MkInstance(fa)
+
+  def fromExists[F[_]](exists: Exists[λ[X => (X, F[X])]]): Instance[F] =
+    MkInstance(exists.value)
 
   def apply[F[_]]: PartialApply[F] = new PartialApply[F]
   final class PartialApply[F[_]] {

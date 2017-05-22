@@ -23,5 +23,9 @@ object Exists {
     type Type = A
   }
 
-  def fromScala[F[_]](fa: F[X] forSome { type X }): Exists[F] = MkExists(fa)
+  def fromScala[F[_]](fa: F[X] forSome { type X }): Exists[F] =
+    MkExists(fa)
+
+  def fromInstance[F[_]](instance: Instance[F]): Exists[λ[X => (X, F[X])]] =
+    instance.toExists
 }
