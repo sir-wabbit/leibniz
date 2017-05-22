@@ -71,5 +71,23 @@ object Resolution {
   implicitly[Bounded[Nothing, Int, Int]]
   implicitly[Bounded[Int, Int, Int]]
 
+  implicitly[Liskov[Nothing, Any, Int, AnyVal]]
+  implicitly[Liskov[Int, Any, Int, AnyVal]]
+  implicitly[Liskov[Int, AnyVal, Int, AnyVal]]
 
+  implicitly[Liskov1[Nothing, Any, Int, AnyVal]]
+  implicitly[Liskov1[Int, Any, Int, AnyVal]]
+  implicitly[Liskov1[Int, AnyVal, Int, AnyVal]]
+
+  implicitly[Leibniz[Nothing, Any, Int, Int]]
+  implicitly[Leibniz[Int, Any, Int, Int]]
+  implicitly[Leibniz[Int, AnyVal, Int, Int]]
+  implicitly[Leibniz[Nothing, Any, AnyVal, AnyVal]]
+  implicitly[Leibniz[Int, Any, AnyVal, AnyVal]]
+  implicitly[Leibniz[Int, AnyVal, AnyVal, AnyVal]]
+  implicitly[Leibniz[Nothing, Nothing, Nothing, Nothing]]
+
+  implicitly[Int Iso Int]
+  implicitly[Nothing Iso Nothing]
+  implicitly[Any Iso Any]
 }

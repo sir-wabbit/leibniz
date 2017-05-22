@@ -118,7 +118,7 @@ object Liskov {
   /**
     * Subtyping relation is reflexive.
     */
-  def refl[A]: Liskov[A, A, A, A] = unsafeForce[A, A, A, A]
+  implicit def refl[A]: Liskov[A, A, A, A] = unsafeForce[A, A, A, A]
 
   /**
     * Reify Scala's subtyping relationship into an evidence value.

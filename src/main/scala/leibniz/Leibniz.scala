@@ -104,7 +104,7 @@ object Leibniz {
   /**
     * Equality is reflexive relation.
     */
-  def refl[A]: Leibniz[A, A, A, A] =
+  implicit def refl[A]: Leibniz[A, A, A, A] =
     unsafeForce[A, A, A, A]
 
   /**

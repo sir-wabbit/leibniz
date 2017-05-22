@@ -114,10 +114,13 @@ object Liskov1 {
       def upper = b
     }
 
+  implicit def fix[L, H >: L, A >: L <: H, B >: L <: H]
+  (implicit ab: Liskov[L, H, A, B]): Liskov1[L, H, A, B] = ab.fix[L, H, A, B]
+
   /**
     * Reify Scala's subtyping relationship into an evidence value.
     */
-  implicit def reify[L, H >: L, A >: L <: (H with B), B >: L <: H]: Liskov1[L, H, A, B] =
+  def reify[L, H >: L, A >: L <: (H with B), B >: L <: H]: Liskov1[L, H, A, B] =
     Liskov.reify[L, H, A, B].fix[L, H, A, B]
 
   /**
