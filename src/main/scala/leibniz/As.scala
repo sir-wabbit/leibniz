@@ -12,7 +12,7 @@ import As._
   * @see [[<~<]] `A <~< B` is a type synonym to `A As B`
   */
 sealed abstract class As[-A, +B] private[As]() { ab =>
-  def fix[A1 <: A, B1 >: B]: AsF[A1, B1]
+  def fix[A1 <: A, B1 >: B]: As1[A1, B1]
 
   /**
     * Substitution into a contravariant context.
@@ -100,8 +100,8 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
 
 object As {
   private[this] final class Refl[A]() extends (A As A) {
-    def fix[A1 <: A, B1 >: A]: AsF[A1, B1] =
-      AsF.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
+    def fix[A1 <: A, B1 >: A]: As1[A1, B1] =
+      As1.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
   }
   private[this] val anyRefl: Any As Any = new Refl[Any]()
 
@@ -130,6 +130,28 @@ object As {
     */
   def bracket[A, B, C](f: A As B, g: B As A): A === B =
     Is.unsafeForce[A, B]
+
+
+  def pair[A1, B1, A2, B2] (eq1: A1 <~< B1, eq2: A2 <~< B2): Pair[A1, B1, A2, B2] =
+    new Pair(eq1, eq2)
+
+  final case class Pair[A1, B1, A2, B2] (eq1: A1 <~< B1, eq2: A2 <~< B2) {
+    def liftCo[F[+_, +_]]: F[A1, A2] <~< F[B1, B2] = {
+      type f1[+x] = F[A1, A2] <~< F[x, A2]
+      type f2[+x] = F[A1, A2] <~< F[B1, x]
+      eq2.substCo[f2](eq1.substCo[f1](refl[F[A1, A2]]))
+    }
+    def liftCt[F[-_, -_]]: F[B1, B2] <~< F[A1, A2] = {
+      type f1[+x] = F[x, A2] <~< F[A1, A2]
+      type f2[+x] = F[B1, x] <~< F[A1, A2]
+      eq2.substCo[f2](eq1.substCo[f1](refl[F[A1, A2]]))
+    }
+
+    def substCo[F[+_, +_]](value: F[A1, A2]): F[B1, B2] =
+      liftCo[F].apply(value)
+    def substCt[F[-_, -_]](value: F[B1, B2]): F[A1, A2] =
+      liftCt[F].apply(value)
+  }
 
   /**
     * It can be convenient to convert a [[<:<]] value into a `<~<` value.

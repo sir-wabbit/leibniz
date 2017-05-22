@@ -199,6 +199,6 @@ object Is {
     * `A =:= B` implies `A === B` it is not the case that you can create
     * evidence of `A === B` except via a coercion. Use responsibly.
     */
-  def unsafeFromPredef[A, B](eq: A =:= B): A === B =
+  def fromPredef[A, B](eq: A =:= B): A === B =
     unsafeForce[A, B]
 }

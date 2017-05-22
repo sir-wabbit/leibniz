@@ -11,6 +11,7 @@ object Bounded {
   }
   private[this] val reflAny: Refl[Any] = Refl[Any]()
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def refl[A]: Bounded[A, A, A] =
     reflAny.asInstanceOf[Bounded[A, A, A]]
 

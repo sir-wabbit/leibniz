@@ -12,7 +12,7 @@ import Liskov._
   * @see [[<~<]] `A <~< B` is a type synonym to `Liskov[A, B]`
   */
 sealed abstract class Liskov[-L, +H >: L, -A >: L <: H, +B >: L <: H] private[Liskov]() { ab =>
-  def fix[L1 <: L, H1 >: H, A1 >: L1 <: A, B1 >: B <: H1]: LiskovF[L1, H1, A1, B1]
+  def fix[L1 <: L, H1 >: H, A1 >: L1 <: A, B1 >: B <: H1]: Liskov1[L1, H1, A1, B1]
 
   /**
     * Substitution into a contravariant context.
@@ -100,8 +100,8 @@ sealed abstract class Liskov[-L, +H >: L, -A >: L <: H, +B >: L <: H] private[Li
 
 object Liskov {
   private[this] final case class Refl[A]() extends Liskov[A, A, A, A] {
-    def fix[L1 <: A, H1 >: A, A1 >: L1 <: A, B1 >: A <: H1]: LiskovF[L1, H1, A1, B1] =
-      LiskovF.proved[L1, H1, A1, B1, A1, B1](Leibniz.refl[A1], Leibniz.refl[B1])
+    def fix[L1 <: A, H1 >: A, A1 >: L1 <: A, B1 >: A <: H1]: Liskov1[L1, H1, A1, B1] =
+      Liskov1.proved[L1, H1, A1, B1, A1, B1](Leibniz.refl[A1], Leibniz.refl[B1])
   }
   private[this] val anyRefl: Liskov[Any, Any, Any, Any] = Refl[Any]()
 
@@ -131,8 +131,8 @@ object Liskov {
     * Subtyping is transitive relation and its witnesses can be composed
     * in a chain much like functions.
     *
-    * @see [[LiskovF.compose]]
-    * @see [[LiskovF.andThen]]
+    * @see [[Liskov1.compose]]
+    * @see [[Liskov1.andThen]]
     */
   def compose[L, H >: L, A >: L <: H, B >: L <: H, C >: L <: H]
   (bc: Liskov[L, H, B, C], ab: Liskov[L, H, A, B]): Liskov[L, H, A, C] =
