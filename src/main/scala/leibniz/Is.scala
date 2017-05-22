@@ -130,11 +130,6 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     */
   def toPredef: A =:= B =
     subst[A =:= ?](implicitly[A =:= A])
-
-  def toLeibniz: Leibniz[Nothing, Any, A, B] = {
-    type f[x] = Leibniz[Nothing, Any, A, x]
-    subst[f](Leibniz.refl)
-  }
 }
 
 object Is {
