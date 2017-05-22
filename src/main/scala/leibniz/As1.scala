@@ -1,5 +1,8 @@
 package leibniz
 
+import cats.Functor
+import cats.functor.Contravariant
+
 sealed abstract class As1[A, B] {
   type Upper >: A
   type Lower <: (B with Upper)
@@ -36,6 +39,9 @@ object As1 {
 
   def refl[A]: A As1 A = new Refl[A]()
 
+  def unsafeForce[A, B]: A As1 B =
+    As.unsafeForce[A, B].fix[A, B]
+
   implicit def fix[A, B](implicit ab: A As B): A As1 B = ab.fix[A, B]
 
   def proved[A, B, B1 >: A, A1 <: (B with B1)](a: A Is A1, b: B Is B1): As1[A, B] = new As1[A, B] {
@@ -43,5 +49,24 @@ object As1 {
     type Lower = A1
     def lower: A Is Lower = a
     def upper: B Is Upper = b
+  }
+
+  implicit class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
+    // HACK: This is ridiculously hacky.
+    import hacks._
+    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+      Liskov.unsafeForce[L, H, ~[A], ~[B]]
+
+    def liftCoF[F[_]](implicit F: Functor[F]): F[A] As1 F[B] =
+      unsafeForce[F[A], F[B]]
+
+    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As1 F[A] =
+      unsafeForce[F[B], F[A]]
+
+    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+      liftCoF[F].coerce(fa)
+
+    def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
+      liftCtF[F].coerce(fb)
   }
 }

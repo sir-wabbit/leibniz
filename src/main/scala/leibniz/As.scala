@@ -167,19 +167,17 @@ object As {
     final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
 
-    /**
-      * `F.map(fa)(ab.coerce)`
-      */
-    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
-      fa.asInstanceOf[F[B]]
+    def liftCoF[F[_]](implicit F: Functor[F]): F[A] As F[B] =
+      unsafeForce[F[A], F[B]]
 
-    /**
-      * `F.contramap(fb)(ab.coerce)`
-      */
-    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
+      unsafeForce[F[B], F[A]]
+
+    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+      liftCoF[F].coerce(fa)
+
     def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
-      fb.asInstanceOf[F[A]]
+      liftCtF[F].coerce(fb)
   }
 
   /**
