@@ -37,13 +37,11 @@ import Is.refl
   *        Higher Leibniz]]
   */
 sealed abstract class Is[A, B] private[Is]()  { ab =>
-  def bounded: Leibniz[Nothing, Any, A, B]
-
   /**
-    * To create an instance of `Leibniz[A, B]` you must show that for every
+    * To create an instance of `Is[A, B]` you must show that for every
     * choice of `F[_]` you can convert `F[A]` to `F[B]`.
     */
-  def subst[F[_]](fa: F[A]): F[B] = bounded.subst(fa)
+  def subst[F[_]](fa: F[A]): F[B]
 
   /**
     * Substitution on identity brings about a direct coercion function of the
@@ -51,7 +49,7 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     *
     * @see [[coerce]]
     */
-  def apply(a: A): B = bounded.coerce(a)
+  def apply(a: A): B = coerce(a)
 
   /**
     * Substitution on identity brings about a direct coercion function of the
@@ -59,7 +57,10 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     *
     * @see [[apply]]
     */
-  def coerce(a: A): B = bounded.coerce(a)
+  def coerce(a: A): B = {
+    type f[x] = x
+    subst[f](a)
+  }
 
   /**
     * Equality is transitive relation and its witnesses can be composed
@@ -129,13 +130,21 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     */
   def toPredef: A =:= B =
     subst[A =:= ?](implicitly[A =:= A])
+
+  def toLeibniz: Leibniz[Nothing, Any, A, B] = {
+    type f[x] = Leibniz[Nothing, Any, A, x]
+    subst[f](Leibniz.refl)
+  }
 }
 
 object Is {
-  private[this] val anyRefl: Any === Any =
-    new Is[Any, Any] {
-      val bounded = Leibniz.refl[Any]
-    }
+  def apply[A, B](implicit ev: A Is B): A Is B = ev
+
+  final case class Refl[A]() extends Is[A, A] {
+    def subst[F[_]](fa: F[A]): F[A] = fa
+  }
+
+  private[this] val anyRefl: Any === Any = Refl[Any]()
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to

@@ -27,7 +27,7 @@ sealed abstract class As1[A, B] {
   }
 }
 object As1 {
-  private[this] final case class Refl[A]() extends As1[A, A] {
+  final case class Refl[A]() extends As1[A, A] {
     type Lower = A
     type Upper = A
     def lower = Is.refl[A]

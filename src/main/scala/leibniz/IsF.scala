@@ -112,9 +112,12 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
 }
 
 object IsF {
-  private[this] final class Refl[F[X <: F[X]], A <: F[A]] extends IsF[F, A, A] {
+  def apply[F[X <: F[X]], A <: F[A], B <: F[B]](implicit ev: IsF[F, A, B]): IsF[F, A, B] = ev
+
+  final case class Refl[F[X <: F[X]], A <: F[A]]() extends IsF[F, A, A] {
     def subst[G[X <: F[X]]](x: G[A]): G[A] = x
   }
+
   private[this] type AnyF[X <: AnyF[X]] = Any
   private[this] val anyRefl: IsF[AnyF, Any, Any] = new Refl[AnyF, Any]
 

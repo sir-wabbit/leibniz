@@ -116,7 +116,9 @@ sealed abstract class LeibnizK[A[_], B[_]] private[LeibnizK] () { ab =>
 }
 
 object LeibnizK {
-  private[this] final case class Refl[A[_]]() extends LeibnizK[A, A] {
+  def apply[A[_], B[_]](implicit ab: LeibnizK[A, B]): LeibnizK[A, B] = ab
+
+  final case class Refl[A[_]]() extends LeibnizK[A, A] {
     def subst[F[_[_]]](fa: F[A]): F[A] = fa
   }
   private[this] val anyRefl: Any =~= Any = Refl[Any]()
@@ -133,7 +135,7 @@ object LeibnizK {
   /**
     * Equality is reflexive relation.
     */
-  def refl[A[_]]: A =~= A = unsafeForce[A, A]
+  implicit def refl[A[_]]: A =~= A = unsafeForce[A, A]
 
   /**
     * Given `A =~= B` we can prove that `F[A] === F[B]`.

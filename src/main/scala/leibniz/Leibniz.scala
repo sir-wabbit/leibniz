@@ -67,7 +67,7 @@ sealed abstract class Leibniz[-L, +H >: L, A >: L <: H, B >: L <: H] private[Lei
     * Given `A === B` we can prove that `F[A] === F[B]`.
     *
     * @see [[Leibniz.lift]]
-    * @see [[Leibniz.lift2]]
+    * @see [[Leibniz.pair]]
     * @see [[Leibniz.lift3]]
     */
   final def lift[LF, HF >: LF, F[_ >: L <: H] >: LF <: HF]: Leibniz[LF, HF, F[A], F[B]] =
@@ -81,7 +81,9 @@ sealed abstract class Leibniz[-L, +H >: L, A >: L <: H, B >: L <: H] private[Lei
 }
 
 object Leibniz {
-  private[this] final case class Refl[A]() extends Leibniz[A, A, A, A] {
+  def apply[L, H >: L, A >: L <: H, B >: L <: H](implicit ab: Leibniz[L, H, A, B]): Leibniz[L, H, A, B] = ab
+
+  final case class Refl[A]() extends Leibniz[A, A, A, A] {
     def subst[F[_ >: A <: A]](fa: F[A]): F[A] = fa
   }
   private[this] val anyRefl: Leibniz[Nothing, Any, Any, Any] = Refl[Any]()
@@ -145,7 +147,7 @@ object Leibniz {
   /**
     * Given `A === B` we can prove that `F[A] === F[B]`.
     *
-    * @see [[lift2]]
+    * @see [[pair]]
     * @see [[lift3]]
     */
   def lift[
@@ -164,15 +166,15 @@ object Leibniz {
     * @see [[lift]]
     * @see [[lift3]]
     */
-  def lift2[
+  def pair[
     L1, H1 >: L1, A1 >: L1 <: H1, B1 >: L1 <: H1,
     L2, H2 >: L2, A2 >: L2 <: H2, B2 >: L2 <: H2
   ] (
     eq1: Leibniz[L1, H1, A1, B1],
     eq2: Leibniz[L2, H2, A2, B2]
-  ) : Lift2[L1, H1, A1, B1, L2, H2, A2, B2] = new Lift2(eq1, eq2)
+  ) : Pair[L1, H1, A1, B1, L2, H2, A2, B2] = new Pair(eq1, eq2)
 
-  final case class Lift2[
+  final case class Pair[
     L1, H1 >: L1, A1 >: L1 <: H1, B1 >: L1 <: H1,
     L2, H2 >: L2, A2 >: L2 <: H2, B2 >: L2 <: H2
   ](eq1: Leibniz[L1, H1, A1, B1], eq2: Leibniz[L2, H2, A2, B2]) {
@@ -188,9 +190,9 @@ object Leibniz {
       eq2.subst[f2](eq1.subst[f1](f1))
     }
 
-    def unbounded[F[_ >: L1 <: H1, _ >: L2 <: H2]]: Is[F[A1, A2], F[B1, B2]] = {
-      type f1[α >: L1 <: H1] = Is[F[A1, A2], F[α, A2]]
-      type f2[α >: L2 <: H2] = Is[F[A1, A2], F[B1, α]]
+    def unbounded[F[_ >: L1 <: H1, _ >: L2 <: H2]]: F[A1, A2] Is F[B1, B2] = {
+      type f1[α >: L1 <: H1] = F[A1, A2] Is F[α, A2]
+      type f2[α >: L2 <: H2] = F[A1, A2] Is F[B1, α]
       eq2.subst[f2](eq1.subst[f1](Is.refl[F[A1, A2]]))
     }
   }

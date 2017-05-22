@@ -5,7 +5,9 @@ sealed abstract class Bounded[-L, +U >: L, A] private [Bounded] () {
   def proof: A === Type
 }
 object Bounded {
-  private[this] final case class Refl[A]() extends Bounded[A, A, A] {
+  def apply[L, U >: L, A](implicit ev: Bounded[L, U, A]): Bounded[L, U, A] = ev
+
+  final case class Refl[A]() extends Bounded[A, A, A] {
     type Type = A
     val proof: A === A = Is.refl
   }
@@ -15,5 +17,5 @@ object Bounded {
   def refl[A]: Bounded[A, A, A] =
     reflAny.asInstanceOf[Bounded[A, A, A]]
 
-  def reify[L, U >: L, A >: L <: U]: Bounded[L, U, A] = refl[A]
+  implicit def reify[L, U >: L, A >: L <: U]: Bounded[L, U, A] = refl[A]
 }

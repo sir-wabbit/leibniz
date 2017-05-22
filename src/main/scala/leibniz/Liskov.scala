@@ -99,7 +99,9 @@ sealed abstract class Liskov[-L, +H >: L, -A >: L <: H, +B >: L <: H] private[Li
 }
 
 object Liskov {
-  private[this] final case class Refl[A]() extends Liskov[A, A, A, A] {
+  def apply[L, H >: L, A >: L <: H, B >: L <: H](implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
+
+  final case class Refl[A]() extends Liskov[A, A, A, A] {
     def fix[L1 <: A, H1 >: A, A1 >: L1 <: A, B1 >: A <: H1]: Liskov1[L1, H1, A1, B1] =
       Liskov1.proved[L1, H1, A1, B1, A1, B1](Leibniz.refl[A1], Leibniz.refl[B1])
   }

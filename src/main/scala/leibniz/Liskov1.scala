@@ -11,7 +11,7 @@ sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
 
   def loosen: Liskov[L, H, A, B] = {
     type f[x >: L <: H, y >: L <: H] = Liskov[L, H, x, y]
-    Leibniz.lift2(lower.flip, upper.flip).subst[f](
+    Leibniz.pair(lower.flip, upper.flip).subst[f](
       Liskov.reify[L, H, Lower, Upper])
   }
 
@@ -80,7 +80,7 @@ sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
   }
 }
 object Liskov1 {
-  private[this] final case class Refl[A]() extends Liskov1[A, A, A, A] {
+  final case class Refl[A]() extends Liskov1[A, A, A, A] {
     type Lower = A
     type Upper = A
     def lower = Leibniz.refl[A]

@@ -99,11 +99,13 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
 }
 
 object As {
-  private[this] final class Refl[A]() extends (A As A) {
+  def apply[A, B](implicit ev: A As B): A As B = ev
+
+  final case class Refl[A]() extends (A As A) {
     def fix[A1 <: A, B1 >: A]: As1[A1, B1] =
       As1.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
   }
-  private[this] val anyRefl: Any As Any = new Refl[Any]()
+  private[this] val reflAny: Any As Any = new Refl[Any]()
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
@@ -111,7 +113,7 @@ object As {
     */
   @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def unsafeForce[A, B]: A As B =
-    anyRefl.asInstanceOf[A As B]
+    reflAny.asInstanceOf[A As B]
 
   /**
     * Subtyping relation is reflexive.
