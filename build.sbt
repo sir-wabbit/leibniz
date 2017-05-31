@@ -13,9 +13,10 @@ val simulacrumLibrary = List(
 lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3"),
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
-  organization := "com.alexknvl",
-  version := "0.3.2",
-  scalaVersion := "2.12.1",
+  organization      := "com.alexknvl",
+  version           := "0.3.2",
+  scalaVersion      := "2.12.1",
+  scalaOrganization := "org.typelevel",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
   scalacOptions ++= List(
     "-deprecation", "-unchecked", "-feature",
@@ -23,6 +24,7 @@ lazy val commonSettings = List(
     "-language:existentials",
     "-language:higherKinds",
     "-language:implicitConversions",
+    "-Yliteral-types",
     "-Ypartial-unification",
     "-Yno-adapted-args", "-Ywarn-dead-code",
     "-Ywarn-numeric-widen", "-Xfuture"),

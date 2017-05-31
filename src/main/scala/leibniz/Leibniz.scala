@@ -172,7 +172,7 @@ object Leibniz {
   ] (
     eq1: Leibniz[L1, H1, A1, B1],
     eq2: Leibniz[L2, H2, A2, B2]
-  ) : Pair[L1, H1, A1, B1, L2, H2, A2, B2] = new Pair(eq1, eq2)
+  ) : Pair[L1, H1, A1, B1, L2, H2, A2, B2] = Pair(eq1, eq2)
 
   final case class Pair[
     L1, H1 >: L1, A1 >: L1 <: H1, B1 >: L1 <: H1,

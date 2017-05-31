@@ -18,7 +18,7 @@ sealed trait Instance[F[_]] { fa =>
   def toExists: Exists[λ[X => (X, F[X])]] =
     Exists.fromScala[λ[X => (X, F[X])]]((first, second))
 
-  override def toString = first.toString
+  override def toString: String = first.toString
 }
 object Instance {
   private final case class MkInstance[F[_], A](tuple: (A, F[A])) extends Instance[F] {

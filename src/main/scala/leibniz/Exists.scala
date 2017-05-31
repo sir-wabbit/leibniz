@@ -16,10 +16,10 @@ sealed trait Exists[F[_]] { fa =>
 
   def toScala: F[A] forSome { type A } = value
 
-  override def toString = value.toString
+  override def toString: String = value.toString
 }
 object Exists {
-  private final case class MkExists[F[_], A](val value: F[A]) extends Exists[F] {
+  private final case class MkExists[F[_], A](value: F[A]) extends Exists[F] {
     type Type = A
   }
 

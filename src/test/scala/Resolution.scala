@@ -1,11 +1,14 @@
 import cats.Id
 import leibniz._
+import org.scalatest.FunSpec
+
+import scala.annotation.unchecked.uncheckedVariance
 
 @SuppressWarnings(Array(
   "org.wartremover.warts.NonUnitStatements",
   "org.wartremover.warts.Nothing",
   "org.wartremover.warts.Any"))
-object Resolution {
+class Resolution extends FunSpec {
   implicitly[Int <~< Int]
   implicitly[Int <~< AnyVal]
 
@@ -91,5 +94,7 @@ object Resolution {
   implicitly[Nothing Iso Nothing]
   implicitly[Any Iso Any]
 
-
+  import leibniz.hacks._
+  def f[A, B, H >: ~[~[A] with ~[B]]]: ~[A] <:< H = implicitly[<:<[~[A], H]]
+  f[String, Int, String with Int]: String <:< (String with Int)
 }

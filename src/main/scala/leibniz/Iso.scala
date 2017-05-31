@@ -26,9 +26,19 @@ trait Iso[A, @sp B] { ab =>
 
   def compose[Z](za: Iso[Z, A]): Iso[Z, B] = za.andThen(ab)
 
-  def lift[F[_]](implicit F: Functor[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+  def liftCoF[F[_]](implicit F: Functor[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
     def to(fa: F[A]): F[B] = F.map(fa)(ab.to)
     def from(fb: F[B]): F[A] = F.map(fb)(ab.from)
+  }
+
+  def liftCtF[F[_]](implicit F: Contravariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+    def to(fa: F[A]): F[B] = F.contramap(fa)(ab.from)
+    def from(fb: F[B]): F[A] = F.contramap(fb)(ab.to)
+  }
+
+  def liftInvF[F[_]](implicit F: Invariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+    def to(fa: F[A]): F[B] = F.imap(fa)(ab.to)(ab.from)
+    def from(fb: F[B]): F[A] = F.imap(fb)(ab.from)(ab.to)
   }
 
   def flip: Iso[B, A] = new Iso[B, A] {

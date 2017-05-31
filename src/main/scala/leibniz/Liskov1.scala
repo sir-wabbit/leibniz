@@ -83,8 +83,8 @@ object Liskov1 {
   final case class Refl[A]() extends Liskov1[A, A, A, A] {
     type Lower = A
     type Upper = A
-    def lower = Leibniz.refl[A]
-    def upper = Leibniz.refl[A]
+    def lower: Leibniz[A, A, A, A] = Leibniz.refl[A]
+    def upper: Leibniz[A, A, A, A] = Leibniz.refl[A]
   }
   private[this] val anyRefl: Liskov1[Any, Any, Any, Any] = Refl[Any]()
 
@@ -110,8 +110,8 @@ object Liskov1 {
     new Liskov1[L, H, A, B] {
       type Upper = B1
       type Lower = A1
-      def lower = a
-      def upper = b
+      def lower: Leibniz[L, H, A, A1] = a
+      def upper: Leibniz[L, H, B, B1] = b
     }
 
   implicit def fix[L, H >: L, A >: L <: H, B >: L <: H]

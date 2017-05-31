@@ -33,8 +33,8 @@ object As1 {
   final case class Refl[A]() extends As1[A, A] {
     type Lower = A
     type Upper = A
-    def lower = Is.refl[A]
-    def upper = Is.refl[A]
+    def lower: Is[A, A] = Is.refl[A]
+    def upper: Is[A, A] = Is.refl[A]
   }
 
   def refl[A]: A As1 A = new Refl[A]()
