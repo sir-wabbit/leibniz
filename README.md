@@ -39,7 +39,7 @@ concepts in Scala.
 ## Quick Start
 ```scala
 resolvers += Resolver.bintrayRepo("alexknvl", "maven")
-libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.3.3"
+libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.4.0"
 ```
 
 ## License

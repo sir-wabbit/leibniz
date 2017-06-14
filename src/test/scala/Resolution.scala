@@ -93,8 +93,4 @@ class Resolution extends FunSpec {
   implicitly[Int Iso Int]
   implicitly[Nothing Iso Nothing]
   implicitly[Any Iso Any]
-
-  import leibniz.hacks._
-  def f[A, B, H >: ~[~[A] with ~[B]]]: ~[A] <:< H = implicitly[<:<[~[A], H]]
-  f[String, Int, String with Int]: String <:< (String with Int)
 }

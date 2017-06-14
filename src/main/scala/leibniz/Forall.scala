@@ -2,27 +2,16 @@ package leibniz
 
 import cats.~>
 
-trait Forall[F[_]] { f =>
-  def apply[A]: F[A]
+trait ForallImpl { f =>
+  type T[F[_]]
 
-  def mapK[G[_]](fg: F ~> G): ∀[G] =
-    new ∀[G] {
-      def apply[A]: G[A] = fg.apply(f.apply[A])
-    }
+  def apply[F[_]](fa: F[:?:]): T[F]
 
-  def lift[G[_]]: ∀[λ[α => F[G[α]]]] =
-    new ∀[λ[α => F[G[α]]]] {
-      def apply[A]: F[G[A]] = f.apply[G[A]]
-    }
+  def run[F[_], A](tf: T[F]): F[A]
 
-  def toFunctionK: λ[α => Unit] ~> F =
-    new (λ[α => Unit] ~> F) {
-      def apply[A](u: Unit): F[A] = f.apply
-    }
-}
-object Forall {
-  def fromFunctionK[F[_]](f: λ[α => Unit] ~> F): ∀[F] =
-    new ∀[F] {
-      def apply[A]: F[A] = f.apply(())
-    }
+  def mapK[F[_], G[_]](fa: T[F])(fg: F ~> G): T[G]
+
+  def lift[F[_], G[_]](fa: T[F]): T[λ[α => F[G[α]]]]
+
+  def toFunctionK[F[_], G[_]](tf: T[F]): G ~> F
 }
