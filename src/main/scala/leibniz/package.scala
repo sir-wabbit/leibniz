@@ -14,13 +14,24 @@ package object leibniz {
   type Unknown     = UnknownTypes.T
   type UnknownK[A] = UnknownTypes.K[A]
 
-  type :?:     = Unknown
-  type :??:[A] = UnknownK[A]
+  val Void: VoidImpl = new VoidImpl {
+    type T = Nothing
+    def isNothing: T === Nothing = Is.refl[Nothing]
+  }
+  type Void = Void.T
+  implicit def voidConformsToNothing: Void <~< Nothing = Void.isNothing.toAs
+  implicit def nothingConformsToVoid: Nothing <~< Void = Void.isNothing.flip.toAs
+  implicit def voidIsNothing: Void === Nothing = Void.isNothing
 
   type AnyK[A] = Any
 
   type ⊥ = Nothing
   type ⊤ = Any
+
+  type :?:     = Unknown
+  type :??:[A] = UnknownK[A]
+
+  type :!: = Void
 
   type Forall[F[_]] = Forall.T[F]
   type ∀[F[_]] = Forall[F]
