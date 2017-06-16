@@ -1,7 +1,5 @@
 package leibniz
 
-import cats.~>
-
 sealed trait Instance[F[_]] { fa =>
   import Instance._
 
@@ -15,8 +13,7 @@ sealed trait Instance[F[_]] { fa =>
   def toScala: (A, F[A]) forSome { type A } =
     (first, second)
 
-  def toExists: Exists[λ[X => (X, F[X])]] =
-    Exists.fromScala[λ[X => (X, F[X])]]((first, second))
+  def toExists: Exists[λ[X => (X, F[X])]] = Exists.fromInstance(this)
 
   override def toString: String = first.toString
 }
@@ -31,7 +28,7 @@ object Instance {
     MkInstance(fa)
 
   def fromExists[F[_]](exists: Exists[λ[X => (X, F[X])]]): Instance[F] =
-    MkInstance(exists.value)
+    MkInstance(Exists.unwrap[λ[X => (X, F[X])]](exists))
 
   def apply[F[_]]: PartialApply[F] = new PartialApply[F]
   final class PartialApply[F[_]] {

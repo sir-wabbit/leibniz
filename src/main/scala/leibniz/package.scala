@@ -1,5 +1,3 @@
-import cats.~>
-
 import scala.annotation.unchecked.{uncheckedVariance => uV}
 
 package object leibniz {
@@ -13,6 +11,8 @@ package object leibniz {
   }
   type Unknown     = UnknownTypes.T
   type UnknownK[A] = UnknownTypes.K[A]
+
+  type ~>[A[_], B[_]] = FunctionK[A, B]
 
   val Void: VoidImpl = new VoidImpl {
     type T = Nothing
@@ -34,6 +34,7 @@ package object leibniz {
   type :!: = Void
 
   type Forall[F[_]] = Forall.T[F]
+  type Exists[F[_]] = Exists.T[F]
   type ∀[F[_]] = Forall[F]
   type ∃[F[_]] = Exists[F]
 
@@ -47,6 +48,34 @@ package object leibniz {
     private[leibniz] type ~[-A] = A @uV
   }
 
+  val Exists: ExistsImpl = new ExistsImpl {
+    type L[F[_], A] = F[A] { type Type = A }
+    type T[F[_]]    = L[F, _]
+
+    def apply[F[_], A](fa: F[A]): T[F] =
+      fa.asInstanceOf[T[F]]
+    def unwrap[F[_]](fa: T[F]): F[fa.Type] =
+      fa.asInstanceOf[F[fa.Type]]
+
+    def mapK[F[_], G[_]](tf: T[F])(fg: F ~> G): T[G] =
+      fg.apply(tf.asInstanceOf[F[:?:]]).asInstanceOf[T[G]]
+
+    def toScala[F[_]](tf: T[F]): F[A] forSome { type A } = unwrap[F](tf)
+    def fromScala[F[_]](fa: F[A] forSome { type A }): T[F] =
+      fa.asInstanceOf[T[F]]
+
+    def fromInstance[F[_]](instance: Instance[F]): T[λ[X => (X, F[X])]] =
+      apply[λ[X => (X, F[X])], instance.Type]((instance.first, instance.second))
+  }
+
+  implicit final class leibnizExistsOps[F[_], A](final val fa: Exists[F] { type Type = A }) extends AnyVal {
+    def value: F[fa.Type] = Exists.unwrap[F](fa)
+
+    def mapK[G[_]](fg: F ~> G): Exists[G] = Exists.mapK[F, G](fa)(fg)
+
+    def toScala: F[A] forSome { type A } = Exists.toScala[F](fa)
+  }
+
   val Forall: ForallImpl = new ForallImpl {
     type T[F[_]] = F[:?:]
 
@@ -58,9 +87,7 @@ package object leibniz {
 
     def lift[F[_], G[_]](fa: T[F]): T[λ[α => F[G[α]]]] = fa.asInstanceOf[F[G[:?:]]]
 
-    def toFunctionK[F[_], G[_]](tf: T[F]): G ~> F = new (G ~> F) {
-      def apply[A](fa: G[A]): F[A] = run[F, A](tf)
-    }
+    def toFunctionK[F[_], G[_]](tf: T[F]): G ~> F = _ => run[F, :?:](tf)
   }
 
   implicit final class leibnizForallOps[F[_]](val f: Forall[F]) extends AnyVal {

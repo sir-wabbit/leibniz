@@ -1,7 +1,5 @@
 package leibniz
 
-import cats.~>
-
 trait ForallImpl { f =>
   type T[F[_]]
 

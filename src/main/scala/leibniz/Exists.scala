@@ -1,31 +1,16 @@
 package leibniz
 
-import cats.~>
 
-sealed trait Exists[F[_]] { fa =>
-  import Exists._
+trait ExistsImpl {
+  type T[F[_]] <: Any { type Type }
 
-  type Type
-  def value: F[Type]
+  def apply[F[_], A](fa: F[A]): T[F]
+  def unwrap[F[_]](fa: T[F]): F[fa.Type]
 
-  def mapK[G[_]](fg: F ~> G): Exists[G] =
-    MkExists(fg.apply(value))
+  def mapK[F[_], G[_]](tf: T[F])(fg: F ~> G): T[G]
 
-  def fold[Z](f: F ~> λ[α => Z]): Z =
-    f.apply(fa.value)
+  def toScala[F[_]](tf: T[F]): F[A] forSome { type A }
+  def fromScala[F[_]](fa: F[A] forSome { type A }): T[F]
 
-  def toScala: F[A] forSome { type A } = value
-
-  override def toString: String = value.toString
-}
-object Exists {
-  private final case class MkExists[F[_], A](value: F[A]) extends Exists[F] {
-    type Type = A
-  }
-
-  def fromScala[F[_]](fa: F[X] forSome { type X }): Exists[F] =
-    MkExists(fa)
-
-  def fromInstance[F[_]](instance: Instance[F]): Exists[λ[X => (X, F[X])]] =
-    instance.toExists
+  def fromInstance[F[_]](instance: Instance[F]): T[λ[X => (X, F[X])]]
 }

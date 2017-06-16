@@ -1,8 +1,6 @@
 package leibniz
 
 import IsK.refl
-import cats.arrow.FunctionK
-import cats.~>
 
 /**
   * The existence of a value of type `LeibnizK[A[_], B[_]]` implies that A ≡ B.
