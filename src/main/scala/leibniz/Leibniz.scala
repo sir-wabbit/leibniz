@@ -118,7 +118,7 @@ object Leibniz {
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Leibniz[L, H, A, B]): Leibniz[L, H, A, B] = ab
 
-  final case class Refl[A]() extends Leibniz[A, A, A, A] {
+  private[this] final case class Refl[A]() extends Leibniz[A, A, A, A] {
     def subst[F[_ >: A <: A]](fa: F[A]): F[A] = fa
   }
   private[this] val anyRefl: Leibniz[Nothing, Any, Any, Any] = Refl[Any]()

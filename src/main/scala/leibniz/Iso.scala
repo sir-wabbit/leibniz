@@ -50,7 +50,7 @@ trait Iso[A, @sp B] { ab =>
 object Iso {
   def apply[A, B](implicit ab: Iso[A, B]): Iso[A, B] = ab
 
-  final case class Refl[A]() extends Iso[A, A] {
+  private[this] final case class Refl[A]() extends Iso[A, A] {
     def to(a: A): A = a
     def from(b: A): A = b
   }

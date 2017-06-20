@@ -155,7 +155,7 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
 object Is {
   def apply[A, B](implicit ev: A Is B): A Is B = ev
 
-  final case class Refl[A]() extends Is[A, A] {
+  private[this] final case class Refl[A]() extends Is[A, A] {
     def subst[F[_]](fa: F[A]): F[A] = fa
   }
 

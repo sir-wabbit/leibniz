@@ -32,7 +32,7 @@ sealed abstract class As1[A, B] {
 object As1 {
   def apply[A, B](implicit ev: A As1 B): A As1 B = ev
 
-  final case class Refl[A]() extends As1[A, A] {
+  private[this] final case class Refl[A]() extends As1[A, A] {
     type Lower = A
     type Upper = A
     def lower: A === A = Is.refl[A]

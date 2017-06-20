@@ -112,7 +112,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
 object As {
   def apply[A, B](implicit ev: A <~< B): A <~< B = ev
 
-  final case class Refl[A]() extends (A <~< A) {
+  private[this] final case class Refl[A]() extends (A <~< A) {
     def fix[A1 <: A, B1 >: A]: As1[A1, B1] =
       As1.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
 

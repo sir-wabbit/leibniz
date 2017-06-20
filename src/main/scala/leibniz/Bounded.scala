@@ -7,7 +7,7 @@ sealed abstract class Bounded[-L, +U >: L, A] private [Bounded] () {
 object Bounded {
   def apply[L, U >: L, A](implicit ev: Bounded[L, U, A]): Bounded[L, U, A] = ev
 
-  final case class Refl[A]() extends Bounded[A, A, A] {
+  private[this] final case class Refl[A]() extends Bounded[A, A, A] {
     type Type = A
     val proof: A === A = Is.refl
   }

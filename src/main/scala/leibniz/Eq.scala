@@ -17,7 +17,7 @@ trait Eq[@sp -A] extends Any with Serializable {
     if (eqv(x, y)) Some(Is.unsafeForce[x.type, y.type]) else None
 }
 object Eq {
-  final class UniversalEq extends Eq[Any] {
+  private[this] final class UniversalEq extends Eq[Any] {
     override def eqv(x: Any, y: Any): Boolean = x match {
       case _: y.type => true
       case _ => false

@@ -59,7 +59,7 @@ object Liskov1 {
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
 
-  final case class Refl[A]() extends Liskov1[A, A, A, A] {
+  private[this] final case class Refl[A]() extends Liskov1[A, A, A, A] {
     type Lower = A
     type Upper = A
     def lower: Leibniz[A, A, A, A] = Leibniz.refl[A]

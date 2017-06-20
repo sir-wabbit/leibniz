@@ -115,7 +115,7 @@ sealed abstract class IsK[A[_], B[_]] private[IsK]() { ab =>
 object IsK {
   def apply[A[_], B[_]](implicit ab: A =~= B): A =~= B = ab
 
-  final case class Refl[A[_]]() extends IsK[A, A] {
+  private[this] final case class Refl[A[_]]() extends IsK[A, A] {
     def subst[F[_[_]]](fa: F[A]): F[A] = fa
   }
   private[this] val anyRefl: Any =~= Any = Refl[Any]()
