@@ -174,8 +174,11 @@ object As {
       liftCt[F].apply(value)
   }
 
-  private[leibniz] trait Syntax[A, B] extends Any {
-    protected[this] def ab: As[A, B]
+  implicit class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
+    import hacks._
+    // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
+    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+      Liskov.unsafeForce[L, H, ~[A], ~[B]]
 
     final def liftCoF[F[_]](implicit F: Functor[F]): F[A] As F[B] =
       unsafeForce[F[A], F[B]]
@@ -188,18 +191,6 @@ object As {
 
     final def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
       liftCtF[F].coerce(fb)
-  }
-
-  implicit class leibnizNothingAsSyntax[B](val ab: As[Nothing, B]) extends AnyVal with Syntax[Nothing, B] {
-    final def toLiskov[L <: Nothing, H >: B]: Liskov[L, H, Nothing, B] =
-      Liskov.unsafeForce[L, H, Nothing, B]
-  }
-
-  implicit class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal with Syntax[Nothing, B] {
-    import hacks._
-    // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
-    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
-      Liskov.unsafeForce[L, H, ~[A], ~[B]]
   }
 
   /**
