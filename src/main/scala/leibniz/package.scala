@@ -15,7 +15,7 @@ package object leibniz {
   type ~>[A[_], B[_]] = FunctionK[A, B]
 
   val Void: VoidImpl = new VoidImpl {
-    type T = Nothing
+    type T = Nothing {}
     def isNothing: T === Nothing = Is.refl[Nothing]
   }
   type Void = Void.T
