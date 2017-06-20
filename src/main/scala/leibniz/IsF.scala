@@ -25,22 +25,17 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
     * @see [[apply]]
     */
   def coerce(a: A): B = {
-    type f[a <: F[a]] = a
+    type f[a] = a
     subst[f](a)
   }
 
   /**
     * Given `A === B` we can convert `(X => A)` into `(X => B)`.
     */
-  def onF[X](fa: X => A): X => B =
-    subst[X => ?](fa)
-
-  /**
-    * A value `IsF[F, A, B]` is always sufficient to produce a similar [[=:=]]
-    * value.
-    */
-  def toPredef: A =:= B =
-    subst[A =:= ?](implicitly[A =:= A])
+  def onF[X](fa: X => A): X => B = {
+    type f[a] = X => a
+    subst[f](fa)
+  }
 
   /**
     * Equality is transitive relation and its witnesses can be composed
@@ -89,30 +84,29 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
   def lift[G[X]]: G[A] === G[B] =
     IsF.lift[G, F, A, B](ab)
 
-//  /**
-//    * Given `A === B` and `I === J` we can prove that `F[A, I] === F[B, J]`.
-//    *
-//    * This method allows you to compose two `Leibniz` values in infix
-//    * manner:
-//    * {{{
-//    *   def either(ab: A === B, ij: I === J): Either[A, I] === Either[B, J] =
-//    *     ab lift2[Either] ij
-//    * }}}
-//    *
-//    * @see [[Is.lift]]
-//    * @see [[Is.lift2]]
-//    * @see [[Is.lift3]]
-//    */
-//  def lift2[F[_, _]]: PartiallyAppliedLift2[F] =
-//    new PartiallyAppliedLift2[F]
-//  final class PartiallyAppliedLift2[F[_, _]] {
-//    def apply[I, J](ij: I === J): F[A, I] === F[B, J] =
-//      Is.lift2(ab, ij)
-//  }
+  /**
+    * A value `IsF[F, A, B]` is always sufficient to produce a similar [[=:=]]
+    * value.
+    */
+  def toPredef: A =:= B = {
+    type f[a] = A =:= a
+    subst[f](implicitly[A =:= A])
+  }
 
-  def toIs: Is[A, B] = {
-    type f[x <: F[x]] = Is[A, x]
+  /**
+    * Given `IsF[A, B]`, prove `A === B`.
+    */
+  def toIs: A === B = {
+    type f[a] = A === a
     subst[f](Is.refl[A])
+  }
+
+  /**
+    * Given `IsF[A, B]`, prove `A <~< B`.
+    */
+  def toAs: A <~< B = {
+    type f[a] = A <~< a
+    subst[f](As.refl[A])
   }
 }
 

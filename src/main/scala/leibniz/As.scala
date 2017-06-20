@@ -29,10 +29,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     *
     * @see [[substCo]]
     */
-  final def substCt[F[-_]](fb: F[B]): F[A] = {
-    type f[+x] = F[x] => F[A]
-    substCo[f](identity[F[A]])(fb)
-  }
+  def substCt[F[-_]](fb: F[B]): F[A]
 
   /**
     * Substitution on identity brings about a direct coercion function
@@ -119,10 +116,11 @@ object As {
     def fix[A1 <: A, B1 >: A]: As1[A1, B1] =
       As1.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
 
-    // Technically, `fix` is enough to implement `substCo`,
-    // but it seems like a good idea to keep both.
-    // NOTE: `substCo` is not enough to implement `fix`.
+    // Technically, `fix` is enough to implement `substCo` and `substCt`,
+    // but it seems like a good idea to keep all three.
+    // NOTE: `substCo` or `substCt` is not enough to implement `fix`.
     def substCo[F[+_]](fa: F[A]): F[A] = fa
+    def substCt[F[-_]](fa: F[A]): F[A] = fa
   }
   private[this] val reflAny: Any <~< Any = new Refl[Any]()
 
@@ -174,22 +172,22 @@ object As {
       liftCt[F].apply(value)
   }
 
-  implicit class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
+  implicit final class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
     import hacks._
     // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
-    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
 
-    final def liftCoF[F[_]](implicit F: Functor[F]): F[A] As F[B] =
+    def liftCoF[F[_]](implicit F: Functor[F]): F[A] As F[B] =
       unsafeForce[F[A], F[B]]
 
-    final def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
+    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
       unsafeForce[F[B], F[A]]
 
-    final def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
       liftCoF[F].coerce(fa)
 
-    final def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
+    def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
       liftCtF[F].coerce(fb)
   }
 

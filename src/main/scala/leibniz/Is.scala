@@ -68,8 +68,10 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     *
     * @see [[compose]]
     */
-  def andThen[C](bc: B === C): A === C =
-    bc.subst[A === ?](ab)
+  final def andThen[C](bc: B === C): A === C = {
+    type f[b] = A === b
+    bc.subst[f](ab)
+  }
 
   /**
     * Equality is transitive relation and its witnesses can be composed
@@ -77,15 +79,17 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     *
     * @see [[andThen]]
     */
-  def compose[Z](za: Z === A): Z === B =
+  final def compose[Z](za: Z === A): Z === B =
     za.andThen(ab)
 
   /**
     * Equality is symmetric relation and therefore can be flipped around.
     * Flipping is its own inverse, so `x.flip.flip == x`.
     */
-  def flip: B === A =
-    subst[? === A](refl)
+  final def flip: B === A = {
+    type f[a] = a === A
+    subst[f](refl)
+  }
 
 
   /**
@@ -94,14 +98,13 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     * @see [[Is.lift]]
     * @see [[Is.lift2]]
     */
-  def lift[F[_]]: F[A] === F[B] =
+  final def lift[F[_]]: F[A] === F[B] =
     Is.lift(ab)
 
   /**
     * Given `A === B` and `I === J` we can prove that `F[A, I] === F[B, J]`.
     *
-    * This method allows you to compose two `Leibniz` values in infix
-    * manner:
+    * This method allows you to compose two `===` values in infix manner:
     * {{{
     *   def either(ab: A === B, ij: I === J): Either[A, I] === Either[B, J] =
     *     ab lift2[Either] ij
@@ -121,25 +124,32 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
   /**
     * Given `A === B` we can convert `(X => A)` into `(X => B)`.
     */
-  def onF[X](fa: X => A): X => B =
-    subst[X => ?](fa)
+  def onF[X](fa: X => A): X => B = {
+    type f[a] = X => a
+    subst[f](fa)
+  }
 
   /**
-    * A value `A === B` is always sufficient to produce a similar [[=:=]]
-    * value.
+    * Given `A === B`, prove `A =:= B`.
     */
-  def toPredef: A =:= B =
-    subst[A =:= ?](implicitly[A =:= A])
+  def toPredef: A =:= B = {
+    type f[a] = A =:= a
+    subst[f](implicitly[A =:= A])
+  }
 
   /**
-    * A value `A === B` is always sufficient to produce a `Iso[A, B]`
-    * value.
+    * Given `A === B`, make an `Iso[A, B]`.
     */
   def toIso: Iso[A, B] =
     subst[Iso[A, ?]](Iso.id[A])
 
-  def toAs: As[A, B] =
-    subst[As[A, ?]](As.refl[A])
+  /**
+    * Given `A === B`, prove `A <~< B`.
+    */
+  def toAs: A <~< B = {
+    type f[a] = A <~< a
+    subst[f](As.refl[A])
+  }
 }
 
 object Is {
@@ -209,10 +219,10 @@ object Is {
 
   // HACK: This is ridiculously hacky.
   import hacks._
-  implicit class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
-    final def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
+  implicit final class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
+    def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
       Leibniz.unsafeForce[L, H, ~[A], ~[B]]
-    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
   }
 

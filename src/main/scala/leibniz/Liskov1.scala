@@ -1,8 +1,6 @@
 package leibniz
 
 sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
-  import Liskov1._
-
   type Lower >: L <: (B with Upper)
   type Upper >: A <: H
 
@@ -48,28 +46,6 @@ sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
   (za: Liskov1[L2, H2, Z, A]): Liskov1[L2, H2, Z, B] =
     za.andThen(ab)
 
-//  /**
-//    * Given `A <~< B` we can prove that `F[A] <~< F[B]` for any
-//    * covariant `F[+_]`.
-//    *
-//    * @see [[liftCt]]
-//    */
-//  final def liftCo[F[+_]]: F[A] <~< F[B] = {
-//    type f[-α] = F[α] <~< F[B]
-//    substCt[f](refl)
-//  }
-//
-//  /**
-//    * Given `A <~< B` we can prove that `F[B] <~< F[B]` for any
-//    * contravariant `F[-_]`.
-//    *
-//    * @see [[liftCo]]
-//    */
-//  final def liftCt[F[-_]]: F[B] <~< F[A] = {
-//    type f[+α] = F[α] <~< F[A]
-//    substCo[f](refl)
-//  }
-
   /**
     * A value of `A <~< B` is always sufficient to produce a similar [[<:<]]
     * value.
@@ -80,6 +56,9 @@ sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
   }
 }
 object Liskov1 {
+  def apply[L, H >: L, A >: L <: H, B >: L <: H]
+  (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
+
   final case class Refl[A]() extends Liskov1[A, A, A, A] {
     type Lower = A
     type Upper = A

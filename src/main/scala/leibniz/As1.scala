@@ -53,10 +53,10 @@ object As1 {
     def upper: B Is Upper = b
   }
 
-  implicit class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
+  implicit final class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
     import hacks._
     // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
-    final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
+    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
 
     def liftCoF[F[_]](implicit F: Functor[F]): F[A] As1 F[B] =
