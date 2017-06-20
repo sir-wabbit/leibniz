@@ -14,18 +14,11 @@ package object leibniz {
 
   type ~>[A[_], B[_]] = FunctionK[A, B]
 
-  val Void: VoidImpl = new VoidImpl {
-    type T = Nothing {}
-    def isNothing: T === Nothing = Is.refl[Nothing]
-  }
-  type Void = Void.T
-  implicit def voidConformsToNothing: Void <~< Nothing = Void.isNothing.toAs
-  implicit def nothingConformsToVoid: Nothing <~< Void = Void.isNothing.flip.toAs
-  implicit def voidIsNothing: Void === Nothing = Void.isNothing
+  type Void <: Nothing
 
   type AnyK[A] = Any
 
-  type ⊥ = Nothing
+  type ⊥ = Void
   type ⊤ = Any
 
   type :?:     = Unknown
