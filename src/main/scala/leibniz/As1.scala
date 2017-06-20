@@ -6,16 +6,16 @@ import cats.functor.Contravariant
 sealed abstract class As1[A, B] {
   type Upper >: A
   type Lower <: (B with Upper)
-  def lower: A Is Lower
-  def upper: B Is Upper
+  def lower: A === Lower
+  def upper: B === Upper
 
-  def loosen: A As B = {
-    type f1[x] = x As Upper
-    type f2[x] = A As x
+  def loosen: A <~< B = {
+    type f1[x] = x <~< Upper
+    type f2[x] = A <~< x
 
     upper.flip.subst[f2](
       lower.flip.subst[f1](
-        As.refl[Lower] : Lower As Upper))
+        As.refl[Lower] : Lower <~< Upper))
   }
 
   def substCt[F[-_]](fb: F[B]): F[A] =
@@ -30,11 +30,13 @@ sealed abstract class As1[A, B] {
   }
 }
 object As1 {
+  def apply[A, B](implicit ev: A As1 B): A As1 B = ev
+
   final case class Refl[A]() extends As1[A, A] {
     type Lower = A
     type Upper = A
-    def lower: Is[A, A] = Is.refl[A]
-    def upper: Is[A, A] = Is.refl[A]
+    def lower: A === A = Is.refl[A]
+    def upper: A === A = Is.refl[A]
   }
 
   def refl[A]: A As1 A = new Refl[A]()
@@ -42,7 +44,7 @@ object As1 {
   def unsafeForce[A, B]: A As1 B =
     As.unsafeForce[A, B].fix[A, B]
 
-  implicit def fix[A, B](implicit ab: A As B): A As1 B = ab.fix[A, B]
+  implicit def fix[A, B](implicit ab: A <~< B): A As1 B = ab.fix[A, B]
 
   def proved[A, B, B1 >: A, A1 <: (B with B1)](a: A Is A1, b: B Is B1): As1[A, B] = new As1[A, B] {
     type Upper = B1
@@ -52,8 +54,8 @@ object As1 {
   }
 
   implicit class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
-    // HACK: This is ridiculously hacky.
     import hacks._
+    // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
     final def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
       Liskov.unsafeForce[L, H, ~[A], ~[B]]
 
