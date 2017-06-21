@@ -28,7 +28,7 @@ object Instance {
     MkInstance(fa)
 
   def fromExists[F[_]](exists: Exists[λ[X => (X, F[X])]]): Instance[F] =
-    MkInstance(Exists.unwrap[λ[X => (X, F[X])]](exists))
+    MkInstance(Exists.unwrap1[λ[X => (X, F[X])]](exists))
 
   def apply[F[_]]: PartialApply[F] = new PartialApply[F]
   final class PartialApply[F[_]] {

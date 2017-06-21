@@ -10,7 +10,7 @@ class ExistsTest extends FunSpec {
   type Showable = Exists[Showable0]
 
   def test(s: Showable): String = {
-    val x = Exists.unwrap[Showable0](s)
+    val x = Exists.unwrap1[Showable0](s)
     x._2.show(x._1)
 
     // This line doesn't work in IJ.
