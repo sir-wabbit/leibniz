@@ -9,12 +9,20 @@ package object leibniz extends ForallSyntax with ExistsSyntax {
   val Forall: ForallInt   = new ForallImpl
   val Unknown: UnknownInt = new UnknownImpl
 
-  type Unknown     = Unknown.T
-  type UnknownK[A] = Unknown.K[A]
-  type :?:         = Unknown
-  type :??:[A]     = UnknownK[A]
+  type Unk     = Unknown.T
+  type Unk1    = Unknown.T1
+  type Unk2    = Unknown.T2
+  type Unk3    = Unknown.T3
+  type Unk4    = Unknown.T4
+  type Unk5    = Unknown.T5
+  type UnkK[A] = Unknown.K[A]
+  type :?:         = Unk
+  type :??:[A]     = UnkK[A]
 
-  type ~>[A[_], B[_]] = FunctionK[A, B]
+  type ~>[A[_], B[_]]                      = FunctionK[A, B]
+  type ~~>[A[_, _], B[_, _]]               = FunctionK2[A, B]
+  type ~~~>[A[_, _, _], B[_, _, _]]        = FunctionK3[A, B]
+  type ~~~~>[A[_, _, _, _], B[_, _, _, _]] = FunctionK4[A, B]
 
   type Void <: Nothing
   type :!: = Void

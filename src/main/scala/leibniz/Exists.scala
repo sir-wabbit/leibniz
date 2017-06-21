@@ -30,6 +30,9 @@ trait ExistsInt {
   def wrapE4[F[_, _, _, _]](tf: F[T1, T2, T3, T4] forSome { type T1; type T2; type T3; type T4 }): T4[F]
 
   def mapK[F[_], G[_]](tf: T1[F])(fg: F ~> G): T1[G]
+  def mapK2[F[_, _], G[_, _]](tf: T2[F])(fg: F ~~> G): T2[G]
+  def mapK3[F[_, _, _], G[_, _, _]](tf: T3[F])(fg: F ~~~> G): T3[G]
+  def mapK4[F[_, _, _, _], G[_, _, _, _]](tf: T4[F])(fg: F ~~~~> G): T4[G]
 
   def fromInstance[F[_]](instance: Instance[F]): T1[λ[X => (X, F[X])]]
 }
@@ -67,6 +70,12 @@ final class ExistsImpl extends ExistsInt {
 
   def mapK[F[_], G[_]](tf: T1[F])(fg: F ~> G): T1[G] =
     fg.apply(tf.asInstanceOf[F[:?:]]).asInstanceOf[T1[G]]
+  def mapK2[F[_, _], G[_, _]](tf: T2[F])(fg: F ~~> G): T2[G] =
+    fg.apply(tf.asInstanceOf[F[Unk1, Unk2]]).asInstanceOf[T2[G]]
+  def mapK3[F[_, _, _], G[_, _, _]](tf: T3[F])(fg: F ~~~> G): T3[G] =
+    fg.apply(tf.asInstanceOf[F[Unk1, Unk2, Unk3]]).asInstanceOf[T3[G]]
+  def mapK4[F[_, _, _, _], G[_, _, _, _]](tf: T4[F])(fg: F ~~~~> G): T4[G] =
+    fg.apply(tf.asInstanceOf[F[Unk1, Unk2, Unk3, Unk4]]).asInstanceOf[T4[G]]
 
   def fromInstance[F[_]](instance: Instance[F]): T1[λ[X => (X, F[X])]] =
     apply[λ[X => (X, F[X])], instance.Type]((instance.first, instance.second))
@@ -80,15 +89,18 @@ object ExistsSyntax {
   }
   implicit final class Exists2Syntax[F[_, _], A, B]
   (val fa: Exists2[F] { type T1 = A; type T2 = B }) extends AnyVal {
-    def value: F[fa.T1, fa.T2] = Exists.unwrap2[F](fa)
+    def value: F[fa.T1, fa.T2]                 = Exists.unwrap2[F](fa)
+    def mapK[G[_, _]](fg: F ~~> G): Exists2[G] = Exists.mapK2[F, G](fa)(fg)
   }
   implicit final class Exists3Syntax[F[_, _, _], A, B, C]
   (val fa: Exists3[F] { type T1 = A; type T2 = B; type T3 = C }) extends AnyVal {
-    def value: F[fa.T1, fa.T2, fa.T3] = Exists.unwrap3[F](fa)
+    def value: F[fa.T1, fa.T2, fa.T3]              = Exists.unwrap3[F](fa)
+    def mapK[G[_, _, _]](fg: F ~~~> G): Exists3[G] = Exists.mapK3[F, G](fa)(fg)
   }
   implicit final class Exists4Syntax[F[_, _, _, _], A, B, C, D]
   (val fa: Exists4[F] { type T1 = A; type T2 = B; type T3 = C; type T4 = D }) extends AnyVal {
-    def value: F[fa.T1, fa.T2, fa.T3, fa.T4] = Exists.unwrap4[F](fa)
+    def value: F[fa.T1, fa.T2, fa.T3, fa.T4]           = Exists.unwrap4[F](fa)
+    def mapK[G[_, _, _, _]](fg: F ~~~~> G): Exists4[G] = Exists.mapK4[F, G](fa)(fg)
   }
 }
 trait ExistsSyntax {

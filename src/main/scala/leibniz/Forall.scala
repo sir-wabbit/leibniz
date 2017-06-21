@@ -17,6 +17,9 @@ trait ForallInt { f =>
   def run4[F[_, _, _, _], A, B, C, D](tf: T4[F]): F[A, B, C, D]
 
   def mapK[F[_], G[_]](fa: T1[F])(fg: F ~> G): T1[G]
+  def mapK2[F[_, _], G[_, _]](tf: T2[F])(fg: F ~~> G): T2[G]
+  def mapK3[F[_, _, _], G[_, _, _]](tf: T3[F])(fg: F ~~~> G): T3[G]
+  def mapK4[F[_, _, _, _], G[_, _, _, _]](tf: T4[F])(fg: F ~~~~> G): T4[G]
 
   def lift[F[_], G[_]](fa: T1[F]): T1[λ[α => F[G[α]]]]
 
@@ -39,7 +42,10 @@ class ForallImpl extends ForallInt {
   final def run3[F[_, _, _], A, B, C](tf: T3[F]): F[A, B, C] = tf.asInstanceOf[F[A, B, C]]
   final def run4[F[_, _, _, _], A, B, C, D](tf: T4[F]): F[A, B, C, D] = tf.asInstanceOf[F[A, B, C, D]]
 
-  final def mapK[F[_], G[_]](fa: T1[F])(fg: F ~> G): T1[G] = fg.apply(fa)
+  final def mapK[F[_], G[_]](tf: T1[F])(fg: F ~> G): T1[G] = fg.apply(tf)
+  final def mapK2[F[_, _], G[_, _]](tf: T2[F])(fg: F ~~> G): T2[G] = fg.apply(tf)
+  final def mapK3[F[_, _, _], G[_, _, _]](tf: T3[F])(fg: F ~~~> G): T3[G] = fg.apply(tf)
+  final def mapK4[F[_, _, _, _], G[_, _, _, _]](tf: T4[F])(fg: F ~~~~> G): T4[G] = fg.apply(tf)
 
   final def lift[F[_], G[_]](fa: T1[F]): T1[λ[α => F[G[α]]]] = fa.asInstanceOf[F[G[:?:]]]
 
@@ -55,12 +61,15 @@ object ForallSyntax {
   }
   final class Forall2Syntax[F[_, _]](val f: Forall2[F]) extends AnyVal {
     def run[A, B]: F[A, B] = Forall.run2[F, A, B](f)
+    def mapK[G[_, _]](fg: F ~~> G): Forall2[G]   = Forall.mapK2[F, G](f)(fg)
   }
   final class Forall3Syntax[F[_, _, _]](val f: Forall3[F]) extends AnyVal {
     def run[A, B, C]: F[A, B, C] = Forall.run3[F, A, B, C](f)
+    def mapK[G[_, _, _]](fg: F ~~~> G): Forall3[G]   = Forall.mapK3[F, G](f)(fg)
   }
   final class Forall4Syntax[F[_, _, _, _]](val f: Forall4[F]) extends AnyVal {
     def run[A, B, C, D]: F[A, B, C, D] = Forall.run4[F, A, B, C, D](f)
+    def mapK[G[_, _, _, _]](fg: F ~~~~> G): Forall4[G]   = Forall.mapK4[F, G](f)(fg)
   }
 }
 trait ForallSyntax {
