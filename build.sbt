@@ -9,7 +9,7 @@ val catsLibraries = List(
 lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   organization      := "com.alexknvl",
-  version           := "0.9.0",
+  version           := "0.10.0",
   scalaVersion      := "2.12.1",
   scalaOrganization := "org.typelevel",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
