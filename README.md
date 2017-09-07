@@ -26,20 +26,11 @@ concepts in Scala.
  * `As[A, B]` witnesses that `A` is a subtype of `B`.
  * `As1[A, B]` witnesses that `A` is a subtype of `B` using existential types.
  * `Liskov[L, H, A, B]` is a bounded counterpart to `As[A, B]`.
- ---
- * `Exists[F[_]]` witnesses that there exists some type `A` and a value of
-   type `F[A]`. For instance, if you want to witness that a some type
-   `T` has an instance of `Show[T]`, you can provide
-   `Exists[λ[α => (α, Show[α])]]`.
- * `Forall[F[_]]` is a universal quantification encoded as a type in Scala.
-   If you want to witness that some type `F[_]` has a monoid instance
-   regardless of the type argument, you can provide
-   `Forall[λ[α => Monoid[F[α]]]]`.
 
 ## Quick Start
 ```scala
 resolvers += Resolver.bintrayRepo("alexknvl", "maven")
-libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.9.0"
+libraryDependencies += "com.alexknvl"  %%  "leibniz" % "0.10.0"
 ```
 
 ## License
