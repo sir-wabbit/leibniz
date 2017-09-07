@@ -1,18 +1,13 @@
 val testLibraries = List(
   "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
-  "org.typelevel" %% "discipline" % "0.7.3" % "test",
-  "org.scalatest" %% "scalatest" % "3.0.3" % "test")
+  "org.typelevel" %% "discipline" % "0.8" % "test",
+  "org.scalatest" %% "scalatest" % "3.0.4" % "test")
 
 val catsLibraries = List(
-  "org.typelevel" %% "algebra" % "0.7.0",
-  "org.typelevel" %% "cats" % "0.9.0")
-
-val simulacrumLibrary = List(
-  "com.github.mpilquist" %% "simulacrum" % "0.11.0")
+  "org.typelevel" %% "cats-core" % "1.0.0-MF")
 
 lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full),
   organization      := "com.alexknvl",
   version           := "0.9.0",
   scalaVersion      := "2.12.1",

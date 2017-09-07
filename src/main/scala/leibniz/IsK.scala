@@ -125,6 +125,7 @@ object IsK {
     * explicitly coerce types. It is unsafe, but needed where Leibnizian
     * equality isn't sufficient.
     */
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   def unsafeForce[A[_], B[_]]: A =~= B =
     anyRefl.asInstanceOf[A =~= B]
 

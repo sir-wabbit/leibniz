@@ -16,6 +16,8 @@ trait Eq[@sp -A] extends Any with Serializable {
   def eqProof(x: A, y: A): Option[x.type === y.type] =
     if (eqv(x, y)) Some(Is.unsafeForce[x.type, y.type]) else None
 }
+
+@SuppressWarnings(Array("org.wartremover.warts.Equals"))
 object Eq {
   private[this] final class UniversalEq extends Eq[Any] {
     override def eqv(x: Any, y: Any): Boolean = x match {
@@ -38,6 +40,8 @@ object Eq {
     java.lang.Double.doubleToRawLongBits(x) == java.lang.Double.doubleToRawLongBits(y)
   implicit val eqString: Eq[String]  = (x: String, y: String) =>
     x.equals(y)
+
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   implicit def eqOption[A](implicit A: Eq[A]): Eq[Option[A]] = (x: Option[A], y: Option[A]) =>
     x match {
       case None => y.isEmpty
