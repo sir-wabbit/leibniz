@@ -69,6 +69,11 @@ object Iso {
     def from(b: B): A = ba(b)
   }
 
+  def singleton[A, B](implicit A: ValueOf[A], B: ValueOf[B]): Iso[A, B] = new Iso[A, B] {
+    def to(a: A): B = B.value
+    def from(b: B): A = A.value
+  }
+
   private[this] final case class Refl[A]() extends Iso[A, A] {
     def to(a: A): A = a
     def from(b: A): A = b
