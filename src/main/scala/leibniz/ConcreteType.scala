@@ -72,9 +72,8 @@ final class MacroUtil(val c: blackbox.Context) {
         val name = c.tpe.typeSymbol.name.toString
         true
 
-      case t: TypeRef =>
-        val args = t.typeArgs.map(makeConcreteType)
-        true
+      case t: TypeRef if t.typeSymbol.isClass =>
+        t.typeArgs.forall(isConcreteType)
 
       case _ =>
         false
@@ -98,7 +97,7 @@ final class MacroUtil(val c: blackbox.Context) {
         val name = c.tpe.typeSymbol.name.toString
         q"""_root_.leibniz.ConcreteType.CTSingleton[$tpe]($c.asInstanceOf[$tpe])($name)"""
 
-      case t: TypeRef =>
+      case t: TypeRef if t.typeSymbol.isClass =>
         val args = t.typeArgs.map(makeConcreteType)
         q"""_root_.leibniz.ConcreteType.CTRef[$tpe](${t.sym.fullName}, List(..$args))"""
 
