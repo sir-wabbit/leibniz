@@ -51,6 +51,8 @@ sealed abstract class Apart[A, B] { nab =>
   }
 }
 object Apart {
+  implicit def apply[A, B]: A =!= B = macro MacroUtil.apart[A, B]
+
   /**
     * Inequality is an irreflexive relation.
     */
@@ -73,4 +75,7 @@ object Apart {
 
     override def toString: String = s"$A =!= $B"
   }
+
+  def unsafeForce[A, B](A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+    (A compare B).left.get
 }
