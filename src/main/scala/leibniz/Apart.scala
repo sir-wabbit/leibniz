@@ -26,7 +26,7 @@ sealed abstract class Apart[A, B] { nab =>
     * are apart, then any other element is apart from at least
     * one of them.
     */
-  def choose[C](C: ConcreteType[C]): Either[A =!= C, B =!= C]
+  def compare[C](C: ConcreteType[C]): Either[A =!= C, B =!= C]
 
   /**
     * Inequality is symmetric relation and therefore can be flipped around.
@@ -36,8 +36,8 @@ sealed abstract class Apart[A, B] { nab =>
     def proof[F[_]](f: F[B] === F[A]): Constant[F] =
       nab.proof[F](f.flip)
 
-    def choose[C](C: ConcreteType[C]): Either[B =!= C, A =!= C] =
-      nab.choose[C](C).swap
+    def compare[C](C: ConcreteType[C]): Either[B =!= C, A =!= C] =
+      nab.compare[C](C).swap
 
     override def flip: A =!= B = nab
   }
@@ -51,7 +51,8 @@ sealed abstract class Apart[A, B] { nab =>
   }
 }
 object Apart {
-  implicit def apply[A, B]: A =!= B = macro MacroUtil.apart[A, B]
+  implicit def apply[A, B]: A =!= B =
+    macro internal.MacroUtil.apart[A, B]
 
   /**
     * Inequality is an irreflexive relation.
@@ -64,7 +65,7 @@ object Apart {
       def proof[X, Y]: F[X] === F[Y] = Is.unsafeForce[F[X], F[Y]]
     }
 
-    def choose[C](C: ConcreteType[C]): Either[A =!= C, B =!= C] =
+    def compare[C](C: ConcreteType[C]): Either[A =!= C, B =!= C] =
       A.compare(C) match {
         case Right(_) => B.compare(C) match {
           case Right(_) => ???
