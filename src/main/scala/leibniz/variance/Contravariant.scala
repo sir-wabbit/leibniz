@@ -22,10 +22,10 @@ sealed trait Contravariant[F[_]] { F =>
     lift(ev).apply(fa)
 
   def composeCo[G[_]](G: Covariant[G]): Contravariant[λ[x => F[G[x]]]] =
-    ComposeCo[F, G](F, G)
+    new ComposeCo[F, G](F, G)
 
   def composeCt[G[_]](G: Contravariant[G]): Covariant[λ[x => F[G[x]]]] =
-    Covariant.CtCt[F, G](F, G)
+    new Covariant.CtCt[F, G](F, G)
 
   def composePh[G[_]](G: Constant[G]): Constant[λ[x => F[G[x]]]] =
     G.andThenCt[F](F)
@@ -38,24 +38,24 @@ object Contravariant {
 
   def apply[F[_]](implicit ev: Contravariant[F]): Contravariant[F] = ev
 
-  final case class Reified[F[-_]]() extends Contravariant[F] {
+  private[leibniz] final case class Reified[F[-_]]() extends Contravariant[F] {
     def substCo[G[+_], A, B](g: G[F[B]])(implicit ev: A <~< B): G[F[A]] = {
       type f[-x] = G[F[x]]
       ev.substCt[f](g)
     }
   }
 
-  final case class ComposeCo[F[_], G[_]](F: Contravariant[F], G: Covariant[G]) extends Contravariant[λ[x => F[G[x]]]] {
+  private[leibniz] final case class ComposeCo[F[_], G[_]](F: Contravariant[F], G: Covariant[G]) extends Contravariant[λ[x => F[G[x]]]] {
     override def substCo[H[+_], A, B](g: H[F[G[B]]])(implicit ev: A <~< B): H[F[G[A]]] =
       F.lift(G.lift(ev)).substCo[H](g)
   }
 
-  final case class AndThenCo[F[_], G[_]](F: Covariant[F], G: Contravariant[G]) extends Contravariant[λ[x => F[G[x]]]] {
+  private[leibniz] final case class AndThenCo[F[_], G[_]](F: Covariant[F], G: Contravariant[G]) extends Contravariant[λ[x => F[G[x]]]] {
     override def substCo[H[+_], A, B](g: H[F[G[B]]])(implicit ev: A <~< B): H[F[G[A]]] =
       F.lift(G.lift(ev)).substCo[H](g)
   }
 
-  final case class WrapPh[F[_]](F: Constant[F]) extends Contravariant[F] {
+  private[leibniz] final case class WrapPh[F[_]](F: Constant[F]) extends Contravariant[F] {
     override def substCo[G[+_], A, B](g: G[F[B]])(implicit ev: <~<[A, B]): G[F[A]] =
       F.subst[G, B, A](g)
   }
