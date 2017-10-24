@@ -1,6 +1,7 @@
 package leibniz.variance
 
 import leibniz._
+import leibniz.inhabitance.Proposition
 
 sealed trait Contravariant[F[_]] { F =>
   import Contravariant._
@@ -30,6 +31,11 @@ sealed trait Contravariant[F[_]] { F =>
     G.andThenCt[F](F)
 }
 object Contravariant {
+  implicit def proposition[F[_]]: Proposition[Contravariant[F]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Contravariant[F]]
+  }
+
   def apply[F[_]](implicit ev: Contravariant[F]): Contravariant[F] = ev
 
   final case class Reified[F[-_]]() extends Contravariant[F] {

@@ -1,5 +1,6 @@
 package leibniz.variance
 
+import leibniz.inhabitance.Proposition
 import leibniz.{<~<, As, Unsafe}
 
 trait Covariant[F[_]] { F =>
@@ -30,6 +31,11 @@ trait Covariant[F[_]] { F =>
     G.andThenCo[F](F)
 }
 object Covariant {
+  implicit def proposition[F[_]]: Proposition[Covariant[F]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Covariant[F]]
+  }
+
   def apply[F[_]](implicit ev: Covariant[F]): Covariant[F] = ev
 
   final case class Reified[F[+_]]() extends Covariant[F] {

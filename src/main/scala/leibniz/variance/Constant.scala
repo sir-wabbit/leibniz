@@ -1,6 +1,7 @@
 package leibniz.variance
 
 import leibniz._
+import leibniz.inhabitance.Proposition
 
 sealed trait Constant[F[_]] { F =>
   import Constant._
@@ -26,6 +27,11 @@ sealed trait Constant[F[_]] { F =>
   def asContravariant: Contravariant[F] = Contravariant.WrapPh[F](F)
 }
 object Constant {
+  implicit def proposition[F[_]]: Proposition[Constant[F]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Constant[F]]
+  }
+
   def apply[F[_]](implicit ev: Constant[F]): Constant[F] = ev
 
   final case class Const[X]() extends Constant[λ[a => X]] {
