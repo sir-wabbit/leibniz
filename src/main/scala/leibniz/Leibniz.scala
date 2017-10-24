@@ -1,8 +1,11 @@
 package leibniz
 
+import leibniz.inhabitance.Proposition
+
 /**
   * This particular version of Leibnitz’ equality has been generalized to
   * handle subtyping so that it can be used with constrained type constructors,
+  *
   * such as `F[_ >: L <: H]. `Leibniz[L, H, A, B]` witnesses both `A === B` and
   * that [[A]] and [[B]] are between [[L]] and [[H]]. Subtyping lets you loosen
   * the bounds on [[L]] and [[H]].
@@ -115,39 +118,34 @@ sealed abstract class Leibniz[-L, +H >: L, A >: L <: H, B >: L <: H] private[Lei
 }
 
 object Leibniz {
+  implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Leibniz[L, H, A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Leibniz[L, H, A, B]]
+  }
+
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Leibniz[L, H, A, B]): Leibniz[L, H, A, B] = ab
 
-  private[this] final case class Refl[A]() extends Leibniz[A, A, A, A] {
+  final case class Refl[A]() extends Leibniz[A, A, A, A] {
     def subst[F[_ >: A <: A]](fa: F[A]): F[A] = fa
   }
-  private[this] val anyRefl: Leibniz[Nothing, Any, Any, Any] = Refl[Any]()
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[L, H >: L, A >: L <: H, B >: L <: H]: Leibniz[L, H, A, B] =
-    anyRefl.asInstanceOf[Leibniz[L, H, A, B]]
 
   final def bound[L, H >: L, A >: L <: H, B >: L <: H]
-  (ab: Is[A, B]): Leibniz[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+  (ab: Is[A, B]): Leibniz[L, H, A, B] = {
+    import Unsafe._
+    force[L, H, A, B]
+  }
 
   /**
     * Equality is reflexive relation.
     */
-  implicit def refl[A]: Leibniz[A, A, A, A] =
-    unsafeForce[A, A, A, A]
+  implicit def refl[A]: Leibniz[A, A, A, A] = Refl[A]()
 
   /**
     * Equality is reflexive relation. Compared to [[refl]], this function
     * can be used to specify bounds up front instead of relying on subtyping.
     */
-  def refl_[L, H >: L, A >: L <: H]: Leibniz[L, H, A, A] =
-    unsafeForce[L, H, A, A]
+  def refl_[L, H >: L, A >: L <: H]: Leibniz[L, H, A, A] = Refl[A]()
 
   /**
     * Substitution on identity brings about a direct coercion function of the
@@ -280,12 +278,19 @@ object Leibniz {
     */
   def fromPredef[L, H >: L, A >: L <: H, B >: L <: H]
   (eq: A =:= B): Leibniz[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+    force[L, H, A, B]
 
   /**
     * It can be convenient to convert a [[===]] value into a `Leibniz` value.
     */
   def fromIs[L, H >: L, A >: L <: H, B >: L <: H]
   (eq: A === B): Leibniz[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+    force[L, H, A, B]
+
+  /**
+    * Unsafe coercion between types. It is unsafe, but needed where Leibnizian
+    * equality isn't sufficient.
+    */
+  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Leibniz[L, H, A, B] =
+    unsafe.coerceK0[Leibniz[L, H, A, B]](refl[Any])
 }

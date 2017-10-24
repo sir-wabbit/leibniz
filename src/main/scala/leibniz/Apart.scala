@@ -1,5 +1,7 @@
 package leibniz
 
+import leibniz.variance.Constant
+
 /**
   * In constructive mathematics, an apartness relation is a constructive
   * form of inequality, and is often taken to be more basic than equality.
@@ -61,9 +63,9 @@ object Apart {
     ev.contradicts(Is.refl[A])
 
   private[leibniz] final case class Forced[A, B](A: ConcreteType[A], B: ConcreteType[B]) extends Apart[A, B] {
-    def proof[F[_]](f: F[A] === F[B]): Constant[F] = new Constant[F] {
-      def proof[X, Y]: F[X] === F[Y] = Is.unsafeForce[F[X], F[Y]]
-    }
+    import Unsafe._
+
+    def proof[F[_]](f: F[A] === F[B]): Constant[F] = Constant.force[F]
 
     def compare[C](C: ConcreteType[C]): Either[A =!= C, B =!= C] =
       A.compare(C) match {
@@ -77,6 +79,6 @@ object Apart {
     override def toString: String = s"$A =!= $B"
   }
 
-  def unsafeForce[A, B](A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+  def force[A, B](A: ConcreteType[A], B: ConcreteType[B])(implicit unsafe: Unsafe): Apart[A, B] =
     (A compare B).left.get
 }

@@ -1,12 +1,15 @@
 package leibniz
 
 sealed abstract class ConcreteType[A] extends Product with Serializable {
-  def compare[B](b: ConcreteType[B]): Either[A =!= B, A === B] =
-    if (equal(b)) Right(Is.unsafeForce[A, B])
-    else Left(Apart.Forced[A, B](this, b))
+  def compare[B](b: ConcreteType[B]): Either[A =!= B, A === B] = {
+    import Unsafe._
+    if (equal(b)) Right(Is.force[A, B])
+    else Left(Apart.force[A, B](this, b))
+  }
 
   def equal[B](b: ConcreteType[B]): Boolean
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   override def equals(obj: scala.Any): Boolean =
     if (obj == null) false
     else if (obj.getClass != this.getClass) false
@@ -49,11 +52,11 @@ object ConcreteType {
   }
 
   final case class CTRef[A](name: String, params: Array[ConcreteType[_]]) extends ConcreteType[A] {
-    def equal[B](b: ConcreteType[B]): Boolean =
-      if (b.isInstanceOf[CTRef[_]]) {
-        val b1 = b.asInstanceOf[CTRef[B]]
-        name == b1.name && params.sameElements(b1.params)
-      } else false
+    def equal[B](b: ConcreteType[B]): Boolean = b match {
+      case b: CTRef[B] =>
+        name == b.name && params.sameElements(b.params)
+      case _ => false
+    }
 
     override def toString: String =
       name + (if (params.isEmpty) "" else

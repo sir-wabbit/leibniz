@@ -1,7 +1,7 @@
 package leibniz
 
-import cats.Functor
-import cats.functor.Contravariant
+import leibniz.inhabitance.Proposition
+import leibniz.variance.{Contravariant, Covariant}
 
 sealed abstract class As1[A, B] {
   type Upper >: A
@@ -39,10 +39,15 @@ object As1 {
     def upper: A === A = Is.refl[A]
   }
 
+  implicit def proposition[A, B]: Proposition[As1[A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[As1[A, B]]
+  }
+
   def refl[A]: A As1 A = new Refl[A]()
 
-  def unsafeForce[A, B]: A As1 B =
-    As.unsafeForce[A, B].fix[A, B]
+  def force[A, B](implicit unsafe: Unsafe): A As1 B =
+    As.force[A, B].fix[A, B]
 
   implicit def fix[A, B](implicit ab: A <~< B): A As1 B = ab.fix[A, B]
 
@@ -54,18 +59,14 @@ object As1 {
   }
 
   implicit final class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
-    import hacks._
-    // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
-    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
-      Liskov.unsafeForce[L, H, ~[A], ~[B]]
-
-    def liftCoF[F[_]](implicit F: Functor[F]): F[A] As1 F[B] =
-      unsafeForce[F[A], F[B]]
+    import Unsafe._
+    def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As1 F[B] =
+      F.lift(ab.loosen).fix
 
     def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As1 F[A] =
-      unsafeForce[F[B], F[A]]
+      force[F[B], F[A]]
 
-    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+    def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
       liftCoF[F].coerce(fa)
 
     def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =

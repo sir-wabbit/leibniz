@@ -1,5 +1,7 @@
 package leibniz
 
+import leibniz.inhabitance.Proposition
+
 sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
   type Lower >: L <: (B with Upper)
   type Upper >: A <: H
@@ -56,29 +58,32 @@ sealed abstract class Liskov1[-L, +H >: L, A >: L <: H, B >: L <: H] { ab =>
   }
 }
 object Liskov1 {
+  implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Liskov1[L, H, A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Liskov1[L, H, A, B]]
+  }
+
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
 
-  private[this] final case class Refl[A]() extends Liskov1[A, A, A, A] {
+  final case class Refl[A]() extends Liskov1[A, A, A, A] {
     type Lower = A
     type Upper = A
     def lower: Leibniz[A, A, A, A] = Leibniz.refl[A]
     def upper: Leibniz[A, A, A, A] = Leibniz.refl[A]
   }
-  private[this] val anyRefl: Liskov1[Any, Any, Any, Any] = Refl[Any]()
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
     * explicitly coerce types. It is unsafe.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[L, H >: L, A >: L <: H, B >: L <: H]: Liskov1[L, H, A, B] =
-    anyRefl.asInstanceOf[Liskov1[L, H, A, B]]
+  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Liskov1[L, H, A, B] =
+    unsafe.coerceK0[Liskov1[L, H, A, B]](refl[Any])
 
   /**
     * Subtyping relation is reflexive.
     */
-  def refl[A]: Liskov1[A, A, A, A] = unsafeForce[A, A, A, A]
+  def refl[A]: Liskov1[A, A, A, A] = Refl[A]()
 
   def proved[
     L, H >: L,
@@ -121,8 +126,8 @@ object Liskov1 {
     * SI-7278]] is fixed, so this function is marked unsafe.
     */
   def bracket[L, H >: L, A >: L <: H, B >: L <: H]
-  (f: Liskov1[L, H, A, B], g: Liskov1[L, H, B, A]): Leibniz[L, H, A, B] =
-    Leibniz.unsafeForce[L, H, A, B]
+  (f: Liskov1[L, H, A, B], g: Liskov1[L, H, B, A])(implicit unsafe: Unsafe): Leibniz[L, H, A, B] =
+    Leibniz.force[L, H, A, B]
 
   /**
     * It can be convenient to convert a [[<:<]] value into a `<~<` value.
@@ -130,6 +135,8 @@ object Liskov1 {
     * `A <:< B` implies `A <~< B` it is not the case that you can create
     * evidence of `A <~< B` except via a coercion. Use responsibly.
     */
-  def fromPredef[L, H >: L, A >: L <: H, B >: L <: H](eq: A <:< B): Liskov1[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+  def fromPredef[L, H >: L, A >: L <: H, B >: L <: H](eq: A <:< B): Liskov1[L, H, A, B] = {
+    import Unsafe._
+    force[L, H, A, B]
+  }
 }

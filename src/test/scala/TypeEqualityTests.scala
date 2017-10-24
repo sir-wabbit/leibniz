@@ -28,5 +28,5 @@ class TypeEqualityTests {
   // ConcreteType[(AnyRef { type Self = this.type }) with (Int { type Y })]
   // ConcreteType[i.type forSome { val i: X; type X }]
   ConcreteType[0]
-  ConcreteType[None.type]
+  // ConcreteType[None.type]
 }

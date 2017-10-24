@@ -169,7 +169,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
       val ca = makeConcreteType(ta)
       val cb = makeConcreteType(tb)
-      q"""_root_.leibniz.Apart.unsafeForce[$ta, $tb]($ca, $cb)"""
+      q"""_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.Unsafe.unsafe)"""
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }

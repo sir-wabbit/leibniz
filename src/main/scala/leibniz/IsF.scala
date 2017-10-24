@@ -1,5 +1,7 @@
 package leibniz
 
+import leibniz.inhabitance.Proposition
+
 
 sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { ab =>
   import IsF._
@@ -111,6 +113,11 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
 }
 
 object IsF {
+  implicit def proposition[F[X <: F[X]], A <: F[A], B <: F[B]]: Proposition[IsF[F, A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[IsF[F, A, B]]
+  }
+
   def apply[F[X <: F[X]], A <: F[A], B <: F[B]](implicit ev: IsF[F, A, B]): IsF[F, A, B] = ev
 
   private[this] final case class Refl[F[X <: F[X]], A <: F[A]]() extends IsF[F, A, A] {
@@ -125,15 +132,16 @@ object IsF {
     * explicitly coerce types. It is unsafe, but needed where Leibnizian
     * equality isn't sufficient.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[F[X <: F[X]], A <: F[A], B <: F[B]]: IsF[F, A, B] =
-    anyRefl.asInstanceOf[IsF[F, A, B]]
+  def force[F[X <: F[X]], A <: F[A], B <: F[B]](implicit unsafe: Unsafe): IsF[F, A, B] =
+    unsafe.coerceK0[IsF[F, A, B]](anyRefl)
 
   /**
     * Equality is reflexive relation.
     */
-  implicit def refl[F[X <: F[X]], A <: F[A]]: IsF[F, A, A] =
-    unsafeForce[F, A, A]
+  implicit def refl[F[X <: F[X]], A <: F[A]]: IsF[F, A, A] = {
+    import Unsafe._
+    force[F, A, A]
+  }
 
   /**
     * Given `IsF[F, A, B]` we can prove that `G[A] === G[B]`.
@@ -159,8 +167,10 @@ object IsF {
     * `A =:= B` implies `IsF[F, A, B]` it is not the case that you can create
     * evidence of `IsF[F, A, B]` except via a coercion.
     */
-  def fromPredef[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A =:= B): IsF[F, A, B] =
-    unsafeForce[F, A, B]
+  def fromPredef[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A =:= B): IsF[F, A, B] = {
+    import Unsafe._
+    force[F, A, B]
+  }
 
   /**
     * It can be convenient to convert a [[===]] value into a `IsF[F, A, B]` value.
@@ -168,6 +178,8 @@ object IsF {
     * `A === B` implies `IsF[F, A, B]` it is not the case that you can create
     * evidence of `IsF[F, A, B]` except via a coercion.
     */
-  def fromIs[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A === B): IsF[F, A, B] =
-    unsafeForce[F, A, B]
+  def fromIs[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A === B): IsF[F, A, B] = {
+    import Unsafe._
+    force[F, A, B]
+  }
 }

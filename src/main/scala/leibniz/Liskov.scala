@@ -1,7 +1,7 @@
 package leibniz
 
-import cats.Functor
-import cats.functor.Contravariant
+import leibniz.inhabitance.Proposition
+import leibniz.variance.{Contravariant, Covariant}
 
 /**
   * Liskov substitutability: A better `<:<`.
@@ -86,10 +86,15 @@ sealed abstract class Liskov[-L, +H >: L, -A >: L <: H, +B >: L <: H] private[Li
 }
 
 object Liskov {
+  implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Liskov[L, H, A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Liskov[L, H, A, B]]
+  }
+
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
 
-  private[this] final case class Refl[A]() extends Liskov[A, A, A, A] {
+  final case class Refl[A]() extends Liskov[A, A, A, A] {
     def fix[L1 <: A, H1 >: A, A1 >: L1 <: A, B1 >: A <: H1]: Liskov1[L1, H1, A1, B1] =
       Liskov1.proved[L1, H1, A1, B1, A1, B1](Leibniz.refl[A1], Leibniz.refl[B1])
 
@@ -99,20 +104,18 @@ object Liskov {
     def substCo[F[+_ >: A <: A]](fa: F[A]): F[A] = fa
     def substCt[F[-_ >: A <: A]](fa: F[A]): F[A] = fa
   }
-  private[this] val anyRefl: Liskov[Any, Any, Any, Any] = Refl[Any]()
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
     * explicitly coerce types. It is unsafe.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[L, H >: L, A >: L <: H, B >: L <: H]: Liskov[L, H, A, B] =
-    anyRefl.asInstanceOf[Liskov[L, H, A, B]]
+  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Liskov[L, H, A, B] =
+    unsafe.coerceK0[Liskov[L, H, A, B]](refl[Any])
 
   /**
     * Subtyping relation is reflexive.
     */
-  implicit def refl[A]: Liskov[A, A, A, A] = unsafeForce[A, A, A, A]
+  implicit def refl[A]: Liskov[A, A, A, A] = Refl[A]()
 
   /**
     * Reify Scala's subtyping relationship into an evidence value.
@@ -140,36 +143,42 @@ object Liskov {
     * SI-7278]] is fixed, so this function is marked unsafe.
     */
   def bracket[L, H >: L, A >: L <: H, B >: L <: H]
-  (f: Liskov[L, H, A, B], g: Liskov[L, H, B, A]): Leibniz[L, H, A, B] =
-    Leibniz.unsafeForce[L, H, A, B]
+  (f: Liskov[L, H, A, B], g: Liskov[L, H, B, A])(implicit unsafe: Unsafe): Leibniz[L, H, A, B] =
+    Leibniz.force[L, H, A, B]
 
   /**
     * Given `A <:< B` with `A >: L <: H` and `B >: L <: H`,
     * prove `Liskov[L, H, A, B]`.
     */
-  def fromPredef[L, H >: L, A >: L <: H, B >: L <: H](eq: A <:< B): Liskov[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+  def fromPredef[L, H >: L, A >: L <: H, B >: L <: H](eq: A <:< B): Liskov[L, H, A, B] = {
+    import Unsafe._
+    force[L, H, A, B]
+  }
 
   /**
     * Given `A <~< B` with `A >: L <: H` and `B >: L <: H`,
     * prove `Liskov[L, H, A, B]`.
     */
-  def fromAs[L, H >: L, A >: L <: H, B >: L <: H](eq: A <~< B): Liskov[L, H, A, B] =
-    unsafeForce[L, H, A, B]
+  def fromAs[L, H >: L, A >: L <: H, B >: L <: H](eq: A <~< B): Liskov[L, H, A, B] = {
+    import Unsafe._
+    force[L, H, A, B]
+  }
 
   implicit class liskovSyntax[L, H >: L, A >: L <: H, B >: L <: H]
   (val ab: Liskov[L, H, A, B]) extends AnyVal
   {
+    import Unsafe._
+
     def liftCoF[LF, HF >: LF, F[_] >: LF <: HF]
-    (implicit F: Functor[F]): Liskov[LF, HF, F[A], F[B]] =
-      unsafeForce[LF, HF, F[A], F[B]]
+    (implicit F: Covariant[F]): Liskov[LF, HF, F[A], F[B]] =
+      force[LF, HF, F[A], F[B]]
 
     def liftCtF[LF, HF >: LF, F[_] >: LF <: HF]
     (implicit F: Contravariant[F]): Liskov[LF, HF, F[B], F[A]] =
-      unsafeForce[LF, HF, F[B], F[A]]
+      force[LF, HF, F[B], F[A]]
 
     def substCoF[LF, HF >: LF, F[_] >: LF <: HF]
-    (fa: F[A])(implicit F: Functor[F]): F[B] =
+    (fa: F[A])(implicit F: Covariant[F]): F[B] =
       liftCoF[LF, HF, F].coerce(fa)
 
     def substCt[LF, HF >: LF, F[_] >: LF <: HF]

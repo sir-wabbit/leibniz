@@ -41,10 +41,6 @@ class Resolution extends FunSpec {
 //  final case class S[N](n: N) extends Nat[S[N]]
 //  implicitly[IsF[Nat, Z, Z]]
 
-  As[Int, AnyVal].toLiskov[Nothing, Any]: Liskov[Nothing, Any, Int, AnyVal]
-  As[Int, AnyVal].toLiskov[Int, Any]: Liskov[Int, Any, Int, AnyVal]
-  As[Int, AnyVal].toLiskov[Int, AnyVal]: Liskov[Int, AnyVal, Int, AnyVal]
-
   implicitly[(String, Int) <~< (String, Any)]
   implicitly[(String, Int) <~< (Any, Any)]
   implicitly[(String, Int) <~< (AnyRef, AnyVal)]

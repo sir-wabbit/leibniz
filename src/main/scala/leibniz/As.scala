@@ -1,7 +1,7 @@
 package leibniz
 
-import cats.Functor
-import cats.functor.Contravariant
+import leibniz.inhabitance.Proposition
+import leibniz.variance.{Contravariant, Covariant}
 
 /**
   * Liskov substitutability: A better `<:<`.
@@ -112,7 +112,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
 object As {
   def apply[A, B](implicit ev: A <~< B): A <~< B = ev
 
-  private[this] final case class Refl[A]() extends (A <~< A) {
+  final case class Refl[A]() extends (A <~< A) {
     def fix[A1 <: A, B1 >: A]: As1[A1, B1] =
       As1.proved[A1, B1, B1, A1](Is.refl[A1], Is.refl[B1])
 
@@ -122,33 +122,36 @@ object As {
     def substCo[F[+_]](fa: F[A]): F[A] = fa
     def substCt[F[-_]](fa: F[A]): F[A] = fa
   }
-  private[this] val reflAny: Any <~< Any = new Refl[Any]()
+
+  implicit def proposition[A, B]: Proposition[As[A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[As[A, B]]
+  }
 
   /**
     * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
     * explicitly coerce types. It is unsafe.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[A, B]: A <~< B =
-    reflAny.asInstanceOf[A <~< B]
+  def force[A, B](implicit unsafe: Unsafe): A <~< B =
+    unsafe.coerceK2_1[<~<, A, B](refl[Any])
 
   /**
     * Subtyping relation is reflexive.
     */
-  implicit def refl[A]: A <~< A = unsafeForce[A, A]
+  implicit def refl[A]: A <~< A = Refl[A]()
 
   /**
     * Reify Scala's subtyping relationship into an evidence value.
     */
-  implicit def reify[A, B >: A]: A <~< B = refl
+  implicit def reify[A, B >: A]: A <~< B = Refl[A]()
 
   /**
     * Subtyping is antisymmetric in theory (and in Dotty). Notice that this is
     * not true in Scala until [[https://issues.scala-lang.org/browse/SI-7278
     * SI-7278]] is fixed.
     */
-  def bracket[A, B, C](f: A <~< B, g: B <~< A): A === B =
-    Is.unsafeForce[A, B]
+  def bracket[A, B, C](f: A <~< B, g: B <~< A)(implicit unsafe: Unsafe): A === B =
+    Is.force[A, B]
 
 
   def pair[A1, B1, A2, B2] (eq1: A1 <~< B1, eq2: A2 <~< B2): Pair[A1, B1, A2, B2] =
@@ -173,18 +176,15 @@ object As {
   }
 
   implicit final class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
-    import hacks._
-    // NOTE: Uses `uncheckedVariance` to emulate type unions in Scala2.
-    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
-      Liskov.unsafeForce[L, H, ~[A], ~[B]]
+    import Unsafe._
 
-    def liftCoF[F[_]](implicit F: Functor[F]): F[A] As F[B] =
-      unsafeForce[F[A], F[B]]
+    def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As F[B] =
+      F.lift(ab)
 
     def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
-      unsafeForce[F[B], F[A]]
+      force[F[B], F[A]]
 
-    def substCoF[F[_]](fa: F[A])(implicit F: Functor[F]): F[B] =
+    def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
       liftCoF[F].coerce(fa)
 
     def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
@@ -194,6 +194,8 @@ object As {
   /**
     * Given `A <:< B`, prove `A <~< B`
     */
-  def fromPredef[A, B](eq: A <:< B): A <~< B =
-    unsafeForce[A, B]
+  def fromPredef[A, B](eq: A <:< B): A <~< B = {
+    import Unsafe._
+    force[A, B]
+  }
 }

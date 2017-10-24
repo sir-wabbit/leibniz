@@ -1,5 +1,7 @@
 package leibniz
 
+import leibniz.inhabitance.{Contractible, Proposition}
+
 /**
   * The data type `Is` is the encoding of Leibnitz’ law which states that
   * if `a` and `b` are identical then they must have identical properties.
@@ -99,7 +101,7 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     * @see [[Is.lift2]]
     */
   final def lift[F[_]]: F[A] === F[B] =
-    Is.lift(ab)
+    Is.lift[F, A, B](ab)
 
   /**
     * Given `A === B` and `I === J` we can prove that `F[A, I] === F[B, J]`.
@@ -118,7 +120,7 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
     new PartiallyAppliedLift2[F]
   final class PartiallyAppliedLift2[F[_, _]] {
     def apply[I, J](ij: I === J): F[A, I] === F[B, J] =
-      Is.lift2(ab, ij)
+      Is.lift2[F, A, B, I, J](ab, ij)
   }
 
   /**
@@ -153,28 +155,29 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
 }
 
 object Is {
+  implicit def proposition[A, B]: Proposition[Is[A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[Is[A, B]]
+  }
+
   def apply[A, B](implicit ev: A Is B): A Is B = ev
 
-  private[this] final case class Refl[A]() extends Is[A, A] {
+  final case class Refl[A]() extends Is[A, A] {
     def subst[F[_]](fa: F[A]): F[A] = fa
   }
 
-  private[this] val anyRefl: Any === Any = Refl[Any]()
-
   /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
+    * Unsafe coercion between types. `force` abuses `asInstanceOf` to
     * explicitly coerce types. It is unsafe, but needed where Leibnizian
     * equality isn't sufficient.
     */
-  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-  def unsafeForce[A, B]: A === B =
-    anyRefl.asInstanceOf[A === B]
+  def force[A, B](implicit unsafe: Unsafe): A === B =
+    unsafe.coerceK2_1[===, A, B](refl[A])
 
   /**
     * Equality is reflexive relation.
     */
-  implicit def refl[A]: A === A =
-    unsafeForce[A, A]
+  implicit def refl[A]: A === A = new Refl[A]()
 
   /**
     * Given `A === B` we can prove that `F[A] === F[B]`.
@@ -217,21 +220,14 @@ object Is {
     mn.subst[f3](ij.subst[f2](ab.subst[f1](refl)))
   }
 
-  // HACK: This is ridiculously hacky.
-  import hacks._
-  implicit final class IsOps[A, B](val ab: Is[A, B]) extends AnyVal {
-    def toLeibniz[L <: (A with B), H >: ~[~[A] with ~[B]]]: Leibniz[L, H, ~[A], ~[B]] =
-      Leibniz.unsafeForce[L, H, ~[A], ~[B]]
-    def toLiskov[L <: (A with B), H >: ~[~[A] with ~[B]]]: Liskov[L, H, ~[A], ~[B]] =
-      Liskov.unsafeForce[L, H, ~[A], ~[B]]
-  }
-
   /**
     * It can be convenient to convert a [[=:=]] value into a `Leibniz` value.
     * This is not strictly valid as while it is almost certainly true that
     * `A =:= B` implies `A === B` it is not the case that you can create
     * evidence of `A === B` except via a coercion. Use responsibly.
     */
-  def fromPredef[A, B](eq: A =:= B): A === B =
-    unsafeForce[A, B]
+  def fromPredef[A, B](eq: A =:= B): A === B = {
+    import Unsafe._
+    force[A, B]
+  }
 }

@@ -13,8 +13,10 @@ trait Eq[@sp -A] extends Any with Serializable {
     */
   def neqv(x: A, y: A): Boolean = !eqv(x, y)
 
-  def eqProof(x: A, y: A): Option[x.type === y.type] =
-    if (eqv(x, y)) Some(Is.unsafeForce[x.type, y.type]) else None
+  def eqProof(x: A, y: A): Option[x.type === y.type] = {
+    import Unsafe._
+    if (eqv(x, y)) Some(Is.force[x.type, y.type]) else None
+  }
 }
 
 trait EqLowerPriority {
@@ -28,7 +30,7 @@ trait EqLowerPriority {
       }
   }
 }
-
+@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 @SuppressWarnings(Array("org.wartremover.warts.Equals"))
 object Eq extends EqLowerPriority {
   import java.lang.Float.floatToRawIntBits
@@ -74,6 +76,7 @@ object Eq extends EqLowerPriority {
   def universalEq[A]: Eq[A] = UniversalEq.asInstanceOf[Eq[A]]
   def referenceEq[A <: AnyRef]: Eq[A] = ReferenceEq.asInstanceOf[Eq[A]]
   def singletonEq[A <: Singleton]: Eq[A] = SingletonEq.asInstanceOf[Eq[A]]
+  def propositionEq[A]: Eq[A] = (x: A, y: A) => true
 
   implicit val eqBool:   Eq[Boolean] = universalEq[Boolean]
   implicit val eqByte:   Eq[Byte]    = universalEq[Byte]

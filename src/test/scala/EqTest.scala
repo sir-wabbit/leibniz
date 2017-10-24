@@ -2,6 +2,7 @@ package leibniz
 
 import org.scalatest.{FunSuite, Matchers}
 
+
 class EqTest extends FunSuite with Matchers {
 //  Eq[Boolean]
 //  Eq[0]
