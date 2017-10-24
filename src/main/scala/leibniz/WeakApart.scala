@@ -1,5 +1,6 @@
 package leibniz
 
+import leibniz.inhabitance.Proposition
 import leibniz.variance.Constant
 
 /**
@@ -16,41 +17,38 @@ import leibniz.variance.Constant
   * @see [[https://en.wikipedia.org/wiki/Apartness_relation
   *        Apartness relation]]
   */
-sealed abstract class Apart[A, B] { nab =>
-  def weaken: WeakApart[A, B]
-  def leftType: ConcreteType[A]
-  def rightType: ConcreteType[B]
+sealed abstract class WeakApart[A, B] { nab =>
+  import WeakApart._
 
   /**
     * If `F[A]` equals to `F[B]` for unequal types `A` and `B`,
     * then `F` must be a constant type constructor.
     */
-  def proof[F[_]](f: F[A] === F[B]): Constant[F] =
-    weaken.proof[F](f)
+  def proof[F[_]](f: F[A] === F[B]): Constant[F]
 
   /**
     * Inequality is a co-transitive relation: if two elements
     * are apart, then any other element is apart from at least
     * one of them.
     */
-  def compare[C](C: ConcreteType[C]): Either[Apart[A, C], Apart[B, C]] =
-    leftType.compare(C) match {
-      case Right(_) => rightType.compare(C) match {
-        case Right(_) => ???
-        case Left(p) => Right(p)
-      }
-      case Left(p) => Left(p)
+  def compare[C]: Cont[Void, Either[A =!= C, B =!= C]] = {
+    val f: (A === C, B === C) => Void = (ac, bc) => nab.contradicts(ac andThen bc.flip)
+    Cont.and(f).map {
+      case Left(nac) => Left(tight(nac))
+      case Right(nbc) => Right(tight(nbc))
     }
+  }
+
 
   /**
     * Inequality is symmetric relation and therefore can be flipped around.
     * Flipping is its own inverse, so `x.flip.flip == x`.
     */
-  def flip: Apart[B, A] = new Apart[B, A] {
-    def weaken: WeakApart[B, A] = nab.weaken.flip
-    def leftType: ConcreteType[B] = nab.rightType
-    def rightType: ConcreteType[A] = nab.leftType
-    override def flip: Apart[A, B] = nab
+  def flip: B =!= A = new (B =!= A) {
+    def proof[F[_]](f: F[B] === F[A]): Constant[F] =
+      nab.proof[F](f.flip)
+
+    override def flip: A =!= B = nab
   }
 
   /**
@@ -60,25 +58,32 @@ sealed abstract class Apart[A, B] { nab =>
     type f[x] = x
     nab.proof[f](ab).proof[Unit, R].subst[f](())
   }
-
-  override def toString: String = s"$leftType =!= $rightType"
 }
-object Apart {
-  implicit def apply[A, B]: Apart[A, B] =
-    macro internal.MacroUtil.apart[A, B]
+object WeakApart {
+  implicit def proposition[A, B]: Proposition[WeakApart[A, B]] = {
+    import leibniz.Unsafe._
+    Proposition.force[WeakApart[A, B]]
+  }
+
+  implicit def apply[A, B]: A =!= B =
+    macro internal.MacroUtil.weakApart[A, B]
 
   /**
     * Inequality is an irreflexive relation.
     */
-  def irreflexive[A](ev: Apart[A, A]): Void =
+  def irreflexive[A](ev: A =!= A): Void =
     ev.contradicts(Is.refl[A])
 
-  private[leibniz] final class Forced[A, B]
-  (val leftType: ConcreteType[A], val rightType: ConcreteType[B])
-  (implicit unsafe: Unsafe) extends Apart[A, B] {
-    def weaken: WeakApart[A, B] = WeakApart.force[A, B]
+  def tight[A, B](f: (A === B) => Void): WeakApart[A, B] = {
+    import Unsafe._
+    force[A, B]
   }
 
-  def force[A, B](A: ConcreteType[A], B: ConcreteType[B])(implicit unsafe: Unsafe): Apart[A, B] =
-    (A compare B).left.get
+  private[leibniz] final class Forced[A, B](implicit unsafe: Unsafe) extends WeakApart[A, B] {
+    def proof[F[_]](f: F[A] === F[B]): Constant[F] =
+      Constant.force[F]
+  }
+
+  def force[A, B](implicit unsafe: Unsafe): WeakApart[A, B] =
+    new Forced[A, B]()
 }

@@ -174,4 +174,16 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }
   }
+
+  def weakApart[A : c.WeakTypeTag, B : c.WeakTypeTag]: c.Tree = {
+    val ta = weakTypeOf[A]
+    val tb = weakTypeOf[B]
+    if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
+      val ca = makeConcreteType(ta)
+      val cb = makeConcreteType(tb)
+      q"""_root_.leibniz.WeakApart.force[$ta, $tb](_root_.leibniz.Unsafe.unsafe)"""
+    } else {
+      c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
+    }
+  }
 }

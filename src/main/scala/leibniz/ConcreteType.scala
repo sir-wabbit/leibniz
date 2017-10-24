@@ -1,7 +1,7 @@
 package leibniz
 
 sealed abstract class ConcreteType[A] extends Product with Serializable {
-  def compare[B](b: ConcreteType[B]): Either[A =!= B, A === B] = {
+  def compare[B](b: ConcreteType[B]): Either[Apart[A, B], A === B] = {
     import Unsafe._
     if (equal(b)) Right(Is.force[A, B])
     else Left(Apart.force[A, B](this, b))
