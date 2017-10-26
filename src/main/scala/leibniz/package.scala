@@ -1,5 +1,5 @@
 package object leibniz {
-  type Void <: Nothing
+  type Void <: Nothing with Void.Tag
 
   type ===[A, B]       = Is[A, B]
   type =~=[A[_], B[_]] = IsK[A, B]

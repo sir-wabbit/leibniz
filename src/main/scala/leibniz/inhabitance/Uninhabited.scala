@@ -24,9 +24,6 @@ object Uninhabited {
   implicit def uninhabited[A](implicit A: Inhabited[A]): Uninhabited[Uninhabited[A]] =
     Uninhabited.witness(nA => A.contradicts(a => nA.contradicts(a)))
 
-  implicit def void: Uninhabited[Void] =
-    witness(identity[Void])
-
   implicit def proposition[A]: Proposition[Uninhabited[A]] =
     Proposition.force[Uninhabited[A]](Unsafe.unsafe)
 }

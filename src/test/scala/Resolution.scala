@@ -1,6 +1,6 @@
 import cats.Id
 import leibniz._
-import leibniz.inhabitance.{Inhabited, Proposition, SingletonOf}
+import leibniz.inhabitance.{Inhabited, Proposition, SingletonOf, Uninhabited}
 import org.scalatest.FunSpec
 
 import scala.annotation.unchecked.uncheckedVariance
@@ -94,9 +94,10 @@ class Resolution extends FunSpec {
   implicitly[Proposition[Proposition[0]]]
   implicitly[Proposition[0 === 1]]
 
-  Inhabited[0]
-  Inhabited["a"]
+//  Inhabited[0]
+//  Inhabited["a"]
 
   SingletonOf[0, Int]
 
+  Uninhabited[Void]
 }
