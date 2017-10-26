@@ -7,7 +7,7 @@ package leibniz
   *
   * Due to Scala2's lack of unions, the signature is a bit uglier than it could be.
   */
-sealed trait Squash[
+sealed abstract class Squash[
   LA, HA >: LA, A >: LA <: HA,
   LB >: LA <: HA, HB >: LB,
   B >: LB <: HB

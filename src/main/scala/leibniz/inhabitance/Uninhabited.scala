@@ -3,7 +3,7 @@ package leibniz.inhabitance
 import leibniz.internal.Unsafe
 import leibniz.{<~<, ===, Void}
 
-sealed trait Uninhabited[-A] {
+sealed abstract class Uninhabited[-A] {
   def contradicts(a: A): Void
 
   def narrow[B](implicit p: B <~< A): Uninhabited[B] =

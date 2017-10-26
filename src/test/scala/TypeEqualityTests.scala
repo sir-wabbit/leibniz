@@ -23,10 +23,10 @@ class TypeEqualityTests {
   implicitly[Int =!= 0]
   // implicitly[Int =!= Int with Long]
   implicitly[Int === Int {}]
-  ConcreteType[List[Array[Seq[Option[1]]]]]
-  ConcreteType[Int with Any]
+  // ConcreteType[List[Array[Seq[Option[1]]]]]
+  // ConcreteType[Int with Any]
   // ConcreteType[(AnyRef { type Self = this.type }) with (Int { type Y })]
   // ConcreteType[i.type forSome { val i: X; type X }]
-  ConcreteType[0]
+  // ConcreteType[0]
   // ConcreteType[None.type]
 }

@@ -6,7 +6,7 @@ import leibniz.internal.Unsafe
 /**
   * Witnesses that all values `(a: A)` are equal and that [[A]] is inhabited.
   */
-sealed trait Contractible[A] {
+sealed abstract class Contractible[A] {
   def inhabited: Inhabited[A]
   def prop: Proposition[A]
 

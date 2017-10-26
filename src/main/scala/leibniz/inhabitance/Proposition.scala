@@ -8,7 +8,7 @@ import leibniz.internal.Unsafe
   *
   * @see [[https://ncatlab.org/nlab/show/mere+proposition]]
   */
-trait Proposition[A] { prop =>
+sealed abstract class Proposition[A] { prop =>
   def equal[B, C](implicit b: B <~< A, c: C <~< A, B: Inhabited[B], C: Inhabited[C]): B === C
 
   def contractible(implicit A: Inhabited[A]): Contractible[A] =

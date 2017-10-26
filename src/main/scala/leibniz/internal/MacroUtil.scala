@@ -49,8 +49,8 @@ final class Whitebox(val c: whitebox.Context) extends Shared[whitebox.Context] {
   def cosingleton[A : c.WeakTypeTag]: c.Tree = {
     val tpe = weakTypeOf[A]
     findCosingleton(tpe) match {
-      case Some((_, x)) =>
-        q"""new _root_.leibniz.Cosingleton[$tpe] { type Result = $x } """
+      case Some((eqi, x)) =>
+        q"""_root_.leibniz.Cosingleton.witness[$x, $tpe]($eqi)"""
       case None =>
         c.abort(c.enclosingPosition, s"Could not find a cosingleton for $tpe.")
     }

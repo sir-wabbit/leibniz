@@ -6,7 +6,7 @@ import leibniz.{<~<, As}
   * Witnesses that all `(a: A)` are equal, that [[A <~< B]],
   * and that [[A]] is inhabited.
   */
-sealed trait SingletonOf[A, +B] { ab =>
+sealed abstract class SingletonOf[A, +B] { ab =>
   import SingletonOf._
 
   def conforms: A <~< B

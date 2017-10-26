@@ -6,7 +6,7 @@ import leibniz.{<~<, Void}
 /**
   * Witnesses that [[A]] is inhabited.
   */
-sealed trait Inhabited[+A] {
+sealed abstract class Inhabited[+A] {
   def contradicts(f: A => Void): Void
 
   def widen[B](implicit p: A <~< B): Inhabited[B] =

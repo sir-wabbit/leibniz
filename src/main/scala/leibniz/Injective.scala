@@ -2,7 +2,7 @@ package leibniz
 
 import leibniz.internal.Unsafe
 
-trait Injective[F[_]] { F =>
+sealed abstract class Injective[F[_]] { F =>
   import Injective._
 
   def proof[A, B](ev: F[A] === F[B]): A === B
