@@ -10,8 +10,15 @@ object Axioms {
   /**
     * (f a = f b) ∧ ¬(a = b) => ∀ x y. f x = f y
     */
-  def typeConstructorParametricity[F[_], A, B, X, Y](ab: (A === B) => Void, fab: F[A] === F[B]): F[X] === F[Y] =
+  def tcParametricity[F[_], A, B, X, Y](ab: (A === B) => Void, fab: F[A] === F[B]): F[X] === F[Y] =
     Unsafe.unsafe.coerceK2_1[Is, F[X], F[Y]](fab)
+
+  /**
+    * (a < b) ∧ (f a <= f b) => ∀ x y. (x < y) => f x <= f y
+    */
+  def cotcParametricity[F[_], A, B, X, Y]
+  (ab: (A === B) => Void, p: A <~< B, q: F[A] <~< F[B], r: X <~< Y): F[X] <~< F[Y] =
+    Unsafe.unsafe.coerceK2_1[As, F[X], F[Y]](q)
 
   /**
     * ¬a => a = ⊥

@@ -1,8 +1,8 @@
-package leibniz.variance
+package leibniz
+package variance
 
 import leibniz.inhabitance.Proposition
 import leibniz.internal.Unsafe
-import leibniz.{<~<, As}
 
 trait Covariant[F[_]] { F =>
   import Covariant._
@@ -27,44 +27,39 @@ trait Covariant[F[_]] { F =>
   def widen[A, B](fa: F[A])(implicit ev: A <~< B): F[B] =
     lift(ev).apply(fa)
 
-  def composeCo[G[_]](G: Covariant[G]): Covariant[λ[x => F[G[x]]]] =
-    new ComposeCo[F, G](F, G)
+  def composeCo[G[_]](G: Covariant[G]): Covariant[λ[x => F[G[x]]]] = {
+    val p: Void <~< Unit = As.reify[Void, Unit]
+    val q: F[G[Void]] <~< F[G[Unit]] = F.lift(G.lift(p))
+    witness[λ[x => F[G[x]]], Void, Unit](Void.isNotUnit, p, q)
+  }
 
-  def composeCt[G[_]](G: Contravariant[G]): Contravariant[λ[x => F[G[x]]]] =
-    Contravariant.AndThenCo[F, G](F, G)
+  def composeCt[G[_]](G: Contravariant[G]): Contravariant[λ[x => F[G[x]]]] = {
+    val p = As.reify[Void, Unit]
+    val q: F[G[Unit]] <~< F[G[Void]] = F.lift(G.lift(p))
+    Contravariant.witness[λ[x => F[G[x]]], Void, Unit](Void.isNotUnit, p, q)
+  }
 
   def composePh[G[_]](G: Constant[G]): Constant[λ[x => F[G[x]]]] =
     G.andThenCo[F](F)
 }
 object Covariant {
+  final class Instance[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[A] <~< F[B]) extends Covariant[F] {
+    def substCo[G[+_], X, Y](g: G[F[X]])(implicit ev: X <~< Y): G[F[Y]] = {
+      val fxy = Axioms.cotcParametricity[F, A, B, X, Y](ab, p, q, ev)
+      fxy.substCo[G](g)
+    }
+  }
+
+  def witness[F[_], A, B](implicit ab: A =!= B, p: A <~< B, q: F[A] <~< F[B]): Covariant[F] =
+    new Instance[F, A, B](ab.contradicts, p, q)
+
   implicit def proposition[F[_]]: Proposition[Covariant[F]] =
     Proposition.force[Covariant[F]](Unsafe.unsafe)
 
   def apply[F[_]](implicit ev: Covariant[F]): Covariant[F] = ev
 
-  private[leibniz] final class Reified[F[+_]]() extends Covariant[F] {
-    def substCo[G[+_], A, B](g: G[F[A]])(implicit ev: A <~< B): G[F[B]] = {
-      type f[+x] = G[F[x]]
-      ev.substCo[f](g)
-    }
-  }
-
-  private[leibniz] final class ComposeCo[F[_], G[_]](F: Covariant[F], G: Covariant[G]) extends Covariant[λ[x => F[G[x]]]] {
-    override def substCo[H[+_], A, B](g: H[F[G[A]]])(implicit ev: A <~< B): H[F[G[B]]] =
-      F.lift(G.lift(ev)).substCo[H](g)
-  }
-
-  private[leibniz] final class CtCt[F[_], G[_]](F: Contravariant[F], G: Contravariant[G]) extends Covariant[λ[x => F[G[x]]]] {
-    override def substCo[H[+_], A, B](g: H[F[G[A]]])(implicit ev: A <~< B): H[F[G[B]]] =
-      F.lift(G.lift(ev)).substCo[H](g)
-  }
-
-  private[leibniz] final class WrapPh[F[_]](F: Constant[F]) extends Covariant[F] {
-    override def substCo[G[+_], A, B](g: G[F[A]])(implicit ev: <~<[A, B]): G[F[B]] =
-      F.subst[G, A, B](g)
-  }
-
-  implicit def reify[F[+_]]: Covariant[F] = new Reified[F]()
+  implicit def reify[F[+_]]: Covariant[F] =
+    witness[F, Void, Unit](Void.isNotUnit, As.reify[Void, Unit], As.reify[F[Void], F[Unit]])
 
   def force[F[_]](implicit unsafe: Unsafe): Covariant[F] = {
     type f[+x] = x

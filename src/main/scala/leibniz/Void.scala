@@ -3,5 +3,8 @@ package leibniz
 object Void {
   def absurd[A](v: Void): A = v
 
-  val isNotUnit: (Unit === Void) => Void = _.coerce(())
+  val isNotUnit: Void =!= Unit =
+    WeakApart.tight(_.flip.coerce(()))
+
+  val isNotUnit2: (Unit === Void) => Void = _.coerce(())
 }

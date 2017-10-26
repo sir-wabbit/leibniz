@@ -69,7 +69,7 @@ sealed abstract class WeakApart[A, B] { nab =>
 object WeakApart {
   final class Instance[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {
     def proof[F[_]](f: F[A] === F[B]): Constant[F] =
-      Constant.witness[F, A, B](nab, f)
+      Constant.witness[F, A, B](this, f)
   }
 
   implicit def proposition[A, B]: Proposition[WeakApart[A, B]] =
