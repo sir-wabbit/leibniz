@@ -17,7 +17,7 @@ sealed abstract class Squash[
   def right: B === Type
 }
 object Squash {
-  private[this] final class Instance
+  private[this] final class Witness
   [LA, HA >: LA, A >: LA <: HA,
    LB >: LA <: HA, HB >: LB, B >: LB <: HB,
    T >: LB <: (HA with HB)]
@@ -34,5 +34,5 @@ object Squash {
    LB >: LA <: HA, HB >: LB, B >: LB <: HB,
    T >: LB <: (HA with HB)]
   (left: A === T, right: B === T): Squash[LA, HA, A, LB, HB, B] =
-    new Instance[LA, HA, A, LB, HB, B, T](left, right)
+    new Witness[LA, HA, A, LB, HB, B, T](left, right)
 }

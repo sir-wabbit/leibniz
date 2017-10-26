@@ -43,7 +43,7 @@ trait Covariant[F[_]] { F =>
     G.andThenCo[F](F)
 }
 object Covariant {
-  final class Instance[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[A] <~< F[B]) extends Covariant[F] {
+  final class Witness[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[A] <~< F[B]) extends Covariant[F] {
     def substCo[G[+_], X, Y](g: G[F[X]])(implicit ev: X <~< Y): G[F[Y]] = {
       val fxy = Axioms.cotcParametricity[F, A, B, X, Y](ab, p, q, ev)
       fxy.substCo[G](g)
@@ -51,7 +51,7 @@ object Covariant {
   }
 
   def witness[F[_], A, B](implicit ab: A =!= B, p: A <~< B, q: F[A] <~< F[B]): Covariant[F] =
-    new Instance[F, A, B](ab.contradicts, p, q)
+    new Witness[F, A, B](ab.contradicts, p, q)
 
   implicit def proposition[F[_]]: Proposition[Covariant[F]] =
     Proposition.force[Covariant[F]](Unsafe.unsafe)

@@ -1,6 +1,5 @@
 package leibniz
 
-import leibniz.inhabitance.Inhabited.witness
 import leibniz.inhabitance.{Inhabited, Proposition, Uninhabited}
 import leibniz.internal.Unsafe
 import leibniz.variance.Constant
@@ -44,8 +43,8 @@ sealed abstract class WeakApart[A, B] { nab =>
   def compare[C]: Cont[Void, Either[A =!= C, B =!= C]] = {
     val f: (A === C, B === C) => Void = (ac, bc) => nab.contradicts(ac andThen bc.flip)
     Cont.and(f).map {
-      case Left(nac) => Left(tight(nac))
-      case Right(nbc) => Right(tight(nbc))
+      case Left(nac) => Left(witness(nac))
+      case Right(nbc) => Right(witness(nbc))
     }
   }
 
@@ -64,10 +63,10 @@ sealed abstract class WeakApart[A, B] { nab =>
     * Strengthen the proof by providing explicit type descriptions.
     */
   def strengthen(implicit A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
-    Apart.make(this, A, B)
+    Apart.witness(this, A, B)
 }
 object WeakApart {
-  final class Instance[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {
+  private[this] final class Witness[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {
     def proof[F[_]](f: F[A] === F[B]): Constant[F] =
       Constant.witness[F, A, B](this, f)
   }
@@ -79,7 +78,7 @@ object WeakApart {
     Uninhabited.witness(nab => A.contradicts(ab => nab.contradicts(ab)))
 
   implicit def uninhabited[A, B](implicit na: Uninhabited[A === B]): Inhabited[A =!= B] =
-    Inhabited.witness(tight(na.contradicts))
+    Inhabited.value(witness(na.contradicts))
 
   implicit def apply[A, B]: A =!= B =
     macro internal.MacroUtil.weakApart[A, B]
@@ -90,8 +89,9 @@ object WeakApart {
   def irreflexive[A](ev: A =!= A): Void =
     ev.contradicts(Is.refl[A])
 
-  def tight[A, B](f: (A === B) => Void): WeakApart[A, B] = new Instance[A, B](f)
+  def witness[A, B](f: (A === B) => Void): WeakApart[A, B] =
+    new Witness[A, B](f)
 
   def force[A, B](implicit unsafe: Unsafe): WeakApart[A, B] =
-    tight(unsafe.void[A === B])
+    witness(unsafe.void[A === B])
 }

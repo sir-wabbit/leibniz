@@ -65,15 +65,15 @@ sealed abstract class Apart[A, B] { nab =>
   override def toString: String = s"$leftType =!= $rightType"
 }
 object Apart {
-  private[this] final class Instance[A, B]
+  private[this] final class Witness[A, B]
   (val leftType: ConcreteType[A], val rightType: ConcreteType[B], val weaken: A =!= B)
     extends Apart[A, B]
 
   implicit def summon[A, B]: Apart[A, B] =
     macro internal.MacroUtil.apart[A, B]
 
-  def make[A, B](weakApart: WeakApart[A, B], A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
-    new Instance[A, B](A, B, weakApart)
+  def witness[A, B](weakApart: WeakApart[A, B], A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+    new Witness[A, B](A, B, weakApart)
 
   /**
     * Inequality is an irreflexive relation.

@@ -43,7 +43,7 @@ sealed trait Contravariant[F[_]] { F =>
     G.andThenCt[F](F)
 }
 object Contravariant {
-  final class Instance[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[B] <~< F[A]) extends Contravariant[F] {
+  final class Witness[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[B] <~< F[A]) extends Contravariant[F] {
     def substCo[G[+_], X, Y](g: G[F[Y]])(implicit ev: X <~< Y): G[F[X]] = {
       type f1[-x] = x => G[F[X]]
       type f[x] = G[F[x]] => G[F[X]]
@@ -59,7 +59,7 @@ object Contravariant {
   }
 
   def witness[F[_], A, B](implicit ab: A =!= B, p: A <~< B, q: F[B] <~< F[A]): Contravariant[F] =
-    new Instance[F, A, B](ab.contradicts, p, q)
+    new Witness[F, A, B](ab.contradicts, p, q)
 
   implicit def proposition[F[_]]: Proposition[Contravariant[F]] =
     Proposition.force[Contravariant[F]](Unsafe.unsafe)

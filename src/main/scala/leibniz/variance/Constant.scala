@@ -42,7 +42,7 @@ sealed trait Constant[F[_]] { F =>
     Void.isNotUnit, As.reify[Void, Unit], proof[Unit, Void].toAs)
 }
 object Constant {
-  private[leibniz] final class Instance[F[_], A, B](ab: A =!= B, fab: F[A] === F[B]) extends Constant[F] {
+  private[leibniz] final class Witness[F[_], A, B](ab: A =!= B, fab: F[A] === F[B]) extends Constant[F] {
     def subst[G[_], X, Y](g: G[F[X]]): G[F[Y]] =
       Axioms.tcParametricity[F, A, B, X, Y](ab.contradicts, fab).subst[G](g)
   }
@@ -55,7 +55,7 @@ object Constant {
   def apply[F[_]](implicit ev: Constant[F]): Constant[F] = ev
 
   def witness[F[_], A, B](nab: A =!= B, fab: F[A] === F[B]): Constant[F] =
-    new Instance[F, A, B](nab, fab)
+    new Witness[F, A, B](nab, fab)
 
   implicit def const[A]: Constant[λ[X => A]] =
     witness[λ[X => A], Void, Unit](Void.isNotUnit, Is.refl[A])

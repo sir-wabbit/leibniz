@@ -12,10 +12,10 @@ sealed abstract class Proposition[A] { prop =>
   def equal[B, C](implicit b: B <~< A, c: C <~< A, B: Inhabited[B], C: Inhabited[C]): B === C
 
   def contractible(implicit A: Inhabited[A]): Contractible[A] =
-    Contractible.construct[A](A, this)
+    Contractible.witness[A](A, this)
 }
 object Proposition {
-  private[this] final class Forced[A](implicit unsafe: Unsafe) extends Proposition[A] {
+  private[this] final class ForcedWitness[A](implicit unsafe: Unsafe) extends Proposition[A] {
     def equal[B, C](implicit b: B <~< A, c: C <~< A, B: Inhabited[B], C: Inhabited[C]): B === C =
       Is.force[B, C]
   }
@@ -31,5 +31,5 @@ object Proposition {
     force[A](Unsafe.unsafe)
 
   def force[A](implicit unsafe: Unsafe): Proposition[A] =
-    new Forced[A]
+    new ForcedWitness[A]
 }
