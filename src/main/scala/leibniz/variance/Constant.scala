@@ -15,13 +15,25 @@ sealed trait Constant[F[_]] { F =>
   }
 
   def compose[G[_]]: Constant[λ[x => F[G[x]]]] =
-    new Compose[F, G](F)
+    witness[λ[x => F[G[x]]], Unit, Void](Void.isNotUnit, proof[G[Unit], G[Void]])
 
-  def andThenCo[G[_]](implicit G: Covariant[G]): Constant[λ[x => G[F[x]]]] =
-    new AndThenCo(G, F)
+  def andThenCo[G[_]](implicit G: Covariant[G]): Constant[λ[x => G[F[x]]]] = {
+    import leibniz.internal.Unsafe._
 
-  def andThenCt[G[_]](implicit G: Contravariant[G]): Constant[λ[x => G[F[x]]]] =
-    new AndThenCt(G, F)
+    val p: G[F[Unit]] === G[F[Void]] =
+      As.bracket(G.lift(F.proof[Unit, Void].toAs), G.lift(F.proof[Void, Unit].toAs))
+
+    witness[λ[x => G[F[x]]], Unit, Void](Void.isNotUnit, p)
+  }
+
+  def andThenCt[G[_]](implicit G: Contravariant[G]): Constant[λ[x => G[F[x]]]] = {
+    import leibniz.internal.Unsafe._
+
+    val p: G[F[Unit]] === G[F[Void]] =
+      As.bracket(G.lift(F.proof[Void, Unit].toAs), G.lift(F.proof[Unit, Void].toAs))
+
+    witness[λ[x => G[F[x]]], Unit, Void](Void.isNotUnit, p)
+  }
 
   def asCovariant: Covariant[F] = new Covariant.WrapPh[F](F)
 
@@ -43,29 +55,8 @@ object Constant {
   def witness[F[_], A, B](nab: (A === B) => Void, fab: F[A] === F[B]): Constant[F] =
     new Instance[F, A, B](nab, fab)
 
-  private[leibniz] final class Const[X]() extends Constant[λ[a => X]] {
-    def subst[G[_], A, B](g: G[X]): G[X] = g
-  }
-
-  private[leibniz] final class Compose[F[_], G[_]](F: Constant[F]) extends Constant[λ[a => F[G[a]]]] {
-    override def subst[H[_], A, B](g: H[F[G[A]]]): H[F[G[B]]] = F.subst[H, G[A], G[B]](g)
-  }
-
-  private[leibniz] final class AndThenCo[F[_], G[_]](F: Covariant[F], G: Constant[G]) extends Constant[λ[x => F[G[x]]]] {
-    override def subst[H[_], A, B](g: H[F[G[A]]]): H[F[G[B]]] = {
-      import leibniz.internal.Unsafe._
-      As.bracket(F.lift(G.proof[A, B].toAs), F.lift(G.proof[B, A].toAs)).subst[H](g)
-    }
-  }
-
-  private[leibniz] final class AndThenCt[F[_], G[_]](F: Contravariant[F], G: Constant[G]) extends Constant[λ[x => F[G[x]]]] {
-    override def subst[H[_], A, B](g: H[F[G[A]]]): H[F[G[B]]] = {
-      import leibniz.internal.Unsafe._
-      As.bracket(F.lift(G.proof[B, A].toAs), F.lift(G.proof[A, B].toAs)).subst[H](g)
-    }
-  }
-
-  implicit def const[A]: Constant[λ[X => A]] = new Const[A]()
+  implicit def const[A]: Constant[λ[X => A]] =
+    witness[λ[X => A], Unit, Void](Void.isNotUnit, Is.refl[A])
 
   /**
     * `unsafeForce` abuses `asInstanceOf` to explicitly coerce types.
