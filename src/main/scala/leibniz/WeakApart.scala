@@ -1,6 +1,8 @@
 package leibniz
 
-import leibniz.inhabitance.Proposition
+import leibniz.inhabitance.Inhabited.witness
+import leibniz.inhabitance.{Inhabited, Proposition, Uninhabited}
+import leibniz.internal.Unsafe
 import leibniz.variance.Constant
 
 /**
@@ -27,6 +29,14 @@ sealed abstract class WeakApart[A, B] { nab =>
   def proof[F[_]](f: F[A] === F[B]): Constant[F]
 
   /**
+    * Having `A === B` and `A =!= B` at the same time leads to a contradiction.
+    */
+  def contradicts(ab: A === B): Void = {
+    val id: Constant[λ[x => x]] = proof[λ[x => x]](ab)
+    id.proof[Unit, Void].coerce(())
+  }
+
+  /**
     * Inequality is a co-transitive relation: if two elements
     * are apart, then any other element is apart from at least
     * one of them.
@@ -38,7 +48,6 @@ sealed abstract class WeakApart[A, B] { nab =>
       case Right(nbc) => Right(tight(nbc))
     }
   }
-
 
   /**
     * Inequality is symmetric relation and therefore can be flipped around.
@@ -52,18 +61,25 @@ sealed abstract class WeakApart[A, B] { nab =>
   }
 
   /**
-    * Having `A === B` and `A =!= B` at the same time leads to a contradiction.
+    * Strengthen the proof by providing explicit type descriptions.
     */
-  def contradicts[R](ab: A === B): R = {
-    type f[x] = x
-    nab.proof[f](ab).proof[Unit, R].subst[f](())
-  }
+  def strengthen(implicit A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+    Apart.make(this, A, B)
 }
 object WeakApart {
-  implicit def proposition[A, B]: Proposition[WeakApart[A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[WeakApart[A, B]]
+  final class Instance[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {
+    def proof[F[_]](f: F[A] === F[B]): Constant[F] =
+      Constant.witness[F, A, B](nab, f)
   }
+
+  implicit def proposition[A, B]: Proposition[WeakApart[A, B]] =
+    Proposition.force[WeakApart[A, B]](Unsafe.unsafe)
+
+  implicit def inhabited[A, B](implicit A: Inhabited[A === B]): Uninhabited[A =!= B] =
+    Uninhabited.witness(nab => A.contradicts(ab => nab.contradicts(ab)))
+
+  implicit def uninhabited[A, B](implicit na: Uninhabited[A === B]): Inhabited[A =!= B] =
+    Inhabited.witness(tight(na.contradicts))
 
   implicit def apply[A, B]: A =!= B =
     macro internal.MacroUtil.weakApart[A, B]
@@ -74,16 +90,8 @@ object WeakApart {
   def irreflexive[A](ev: A =!= A): Void =
     ev.contradicts(Is.refl[A])
 
-  def tight[A, B](f: (A === B) => Void): WeakApart[A, B] = {
-    import Unsafe._
-    force[A, B]
-  }
-
-  private[leibniz] final class Forced[A, B](implicit unsafe: Unsafe) extends WeakApart[A, B] {
-    def proof[F[_]](f: F[A] === F[B]): Constant[F] =
-      Constant.force[F]
-  }
+  def tight[A, B](f: (A === B) => Void): WeakApart[A, B] = new Instance[A, B](f)
 
   def force[A, B](implicit unsafe: Unsafe): WeakApart[A, B] =
-    new Forced[A, B]()
+    tight(unsafe.void[A === B])
 }

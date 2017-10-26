@@ -1,10 +1,10 @@
 package leibniz.inhabitance
 
 import leibniz._
+import leibniz.internal.Unsafe
 
 /**
-  * Witnesses that all values `(a: A)` are equal and
-  * that [[A]] is inhabited.
+  * Witnesses that all values `(a: A)` are equal and that [[A]] is inhabited.
   */
 sealed trait Contractible[A] {
   def inhabited: Inhabited[A]
@@ -18,14 +18,14 @@ object Contractible {
       prop.equal[B, A](p, As.refl[A], B, inhabited)
   }
 
+  def apply[A](implicit A: Contractible[A]): Contractible[A] = A
+
   def construct[A](implicit A: Inhabited[A], prop: Proposition[A]): Contractible[A] =
     new Single[A](A, prop)
 
   implicit def singleton[A <: Singleton](implicit A: ValueOf[A]): Contractible[A] =
     construct[A](Inhabited.witness(A.value), Proposition.singleton[A])
 
-  implicit def proposition[A]: Proposition[Contractible[A]] = {
-    import leibniz.Unsafe._
-    Proposition.force[Contractible[A]]
-  }
+  implicit def proposition[A]: Proposition[Contractible[A]] =
+    Proposition.force[Contractible[A]](Unsafe.unsafe)
 }

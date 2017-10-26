@@ -1,7 +1,5 @@
 package leibniz
 
-import leibniz.inhabitance.Proposition
-
 final case class Cont[R, +A](run: (A => R) => R) {
   def map[B](f: A => B): Cont[R, B] =
     Cont(k => run(a => k(f(a))))

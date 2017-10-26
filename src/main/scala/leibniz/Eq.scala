@@ -13,9 +13,10 @@ trait Eq[@sp -A] extends Any with Serializable {
     */
   def neqv(x: A, y: A): Boolean = !eqv(x, y)
 
-  def eqProof(x: A, y: A): Option[x.type === y.type] = {
-    import Unsafe._
-    if (eqv(x, y)) Some(Is.force[x.type, y.type]) else None
+  def compare(x: A, y: A): Either[x.type =!= y.type, x.type === y.type] = {
+    import leibniz.internal.Unsafe._
+    if (eqv(x, y)) Right(Is.force[x.type, y.type])
+    else Left(WeakApart.force[x.type, y.type])
   }
 }
 

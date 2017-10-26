@@ -1,6 +1,7 @@
 package leibniz
 
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 
 
 sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { ab =>
@@ -113,10 +114,8 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
 }
 
 object IsF {
-  implicit def proposition[F[X <: F[X]], A <: F[A], B <: F[B]]: Proposition[IsF[F, A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[IsF[F, A, B]]
-  }
+  implicit def proposition[F[X <: F[X]], A <: F[A], B <: F[B]]: Proposition[IsF[F, A, B]] =
+    Proposition.force[IsF[F, A, B]](Unsafe.unsafe)
 
   def apply[F[X <: F[X]], A <: F[A], B <: F[B]](implicit ev: IsF[F, A, B]): IsF[F, A, B] = ev
 
@@ -124,24 +123,10 @@ object IsF {
     def subst[G[X <: F[X]]](x: G[A]): G[A] = x
   }
 
-  private[this] type AnyF[X <: AnyF[X]] = Any
-  private[this] val anyRefl: IsF[AnyF, Any, Any] = new Refl[AnyF, Any]
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[F[X <: F[X]], A <: F[A], B <: F[B]](implicit unsafe: Unsafe): IsF[F, A, B] =
-    unsafe.coerceK0[IsF[F, A, B]](anyRefl)
-
   /**
     * Equality is reflexive relation.
     */
-  implicit def refl[F[X <: F[X]], A <: F[A]]: IsF[F, A, A] = {
-    import Unsafe._
-    force[F, A, A]
-  }
+  implicit def refl[F[X <: F[X]], A <: F[A]]: IsF[F, A, A] = new Refl[F, A]
 
   /**
     * Given `IsF[F, A, B]` we can prove that `G[A] === G[B]`.
@@ -162,24 +147,24 @@ object IsF {
   }
 
   /**
-    * It can be convenient to convert a [[=:=]] value into a `IsF[F, A, B]` value.
-    * This is not strictly valid as while it is almost certainly true that
-    * `A =:= B` implies `IsF[F, A, B]` it is not the case that you can create
-    * evidence of `IsF[F, A, B]` except via a coercion.
+    * It can be convenient to convert a [[===]] value into a `IsF[F, A, B]` value.
     */
-  def fromPredef[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A =:= B): IsF[F, A, B] = {
-    import Unsafe._
-    force[F, A, B]
+  def fromIs[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A === B): IsF[F, A, B] = {
+    type f[x <: F[x]] = IsF[F, A, x]
+    Axioms.fBounded[F, A, B, f](eq, refl[F, A])
   }
 
   /**
-    * It can be convenient to convert a [[===]] value into a `IsF[F, A, B]` value.
-    * This is not strictly valid as while it is almost certainly true that
-    * `A === B` implies `IsF[F, A, B]` it is not the case that you can create
-    * evidence of `IsF[F, A, B]` except via a coercion.
+    * It can be convenient to convert a [[=:=]] value into a `IsF[F, A, B]` value.
     */
-  def fromIs[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A === B): IsF[F, A, B] = {
-    import Unsafe._
-    force[F, A, B]
-  }
+  def fromPredef[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A =:= B): IsF[F, A, B] =
+    fromIs[F, A, B](Is.fromPredef(eq))
+
+  /**
+    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
+    * explicitly coerce types. It is unsafe, but needed where Leibnizian
+    * equality isn't sufficient.
+    */
+  def force[F[X <: F[X]], A <: F[A], B <: F[B]](implicit unsafe: Unsafe): IsF[F, A, B] =
+    unsafe.coerceK0[IsF[F, A, B]](refl[F, A])
 }

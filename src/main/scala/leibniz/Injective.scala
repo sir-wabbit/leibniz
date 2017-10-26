@@ -1,5 +1,7 @@
 package leibniz
 
+import leibniz.internal.Unsafe
+
 trait Injective[F[_]] { F =>
   import Injective._
 

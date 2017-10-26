@@ -2,6 +2,7 @@ package leibniz.variance
 
 import leibniz._
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 
 sealed trait Constant[F[_]] { F =>
   import Constant._
@@ -27,12 +28,20 @@ sealed trait Constant[F[_]] { F =>
   def asContravariant: Contravariant[F] = new Contravariant.WrapPh[F](F)
 }
 object Constant {
+  private[leibniz] final class Instance[F[_], A, B](ab: (A === B) => Void, fab: F[A] === F[B]) extends Constant[F] {
+    def subst[G[_], X, Y](g: G[F[X]]): G[F[Y]] =
+      Axioms.typeConstructorParametricity[F, A, B, X, Y](ab, fab).subst[G](g)
+  }
+
   implicit def proposition[F[_]]: Proposition[Constant[F]] = {
-    import leibniz.Unsafe._
+    import leibniz.internal.Unsafe._
     Proposition.force[Constant[F]]
   }
 
   def apply[F[_]](implicit ev: Constant[F]): Constant[F] = ev
+
+  def witness[F[_], A, B](nab: (A === B) => Void, fab: F[A] === F[B]): Constant[F] =
+    new Instance[F, A, B](nab, fab)
 
   private[leibniz] final class Const[X]() extends Constant[λ[a => X]] {
     def subst[G[_], A, B](g: G[X]): G[X] = g
@@ -44,14 +53,14 @@ object Constant {
 
   private[leibniz] final class AndThenCo[F[_], G[_]](F: Covariant[F], G: Constant[G]) extends Constant[λ[x => F[G[x]]]] {
     override def subst[H[_], A, B](g: H[F[G[A]]]): H[F[G[B]]] = {
-      import leibniz.Unsafe._
+      import leibniz.internal.Unsafe._
       As.bracket(F.lift(G.proof[A, B].toAs), F.lift(G.proof[B, A].toAs)).subst[H](g)
     }
   }
 
   private[leibniz] final class AndThenCt[F[_], G[_]](F: Contravariant[F], G: Constant[G]) extends Constant[λ[x => F[G[x]]]] {
     override def subst[H[_], A, B](g: H[F[G[A]]]): H[F[G[B]]] = {
-      import leibniz.Unsafe._
+      import leibniz.internal.Unsafe._
       As.bracket(F.lift(G.proof[B, A].toAs), F.lift(G.proof[A, B].toAs)).subst[H](g)
     }
   }

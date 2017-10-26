@@ -1,7 +1,8 @@
 package leibniz.variance
 
 import leibniz.inhabitance.Proposition
-import leibniz.{<~<, As, Unsafe}
+import leibniz.internal.Unsafe
+import leibniz.{<~<, As}
 
 trait Covariant[F[_]] { F =>
   import Covariant._
@@ -11,6 +12,11 @@ trait Covariant[F[_]] { F =>
   def substCt[G[-_], A, B](g: G[F[B]])(implicit ev: A <~< B): G[F[A]] = {
     type f[+a] = G[a] => G[F[A]]
     substCo[f, A, B](identity[G[F[A]]]).apply(g)
+  }
+
+  def coerce[A, B](value: F[A])(implicit ev: A <~< B): F[B] = {
+    type f[+x] = x
+    substCo[f, A, B](value)
   }
 
   def lift[A, B](ab: A <~< B): F[A] <~< F[B] = {
@@ -31,10 +37,8 @@ trait Covariant[F[_]] { F =>
     G.andThenCo[F](F)
 }
 object Covariant {
-  implicit def proposition[F[_]]: Proposition[Covariant[F]] = {
-    import leibniz.Unsafe._
-    Proposition.force[Covariant[F]]
-  }
+  implicit def proposition[F[_]]: Proposition[Covariant[F]] =
+    Proposition.force[Covariant[F]](Unsafe.unsafe)
 
   def apply[F[_]](implicit ev: Covariant[F]): Covariant[F] = ev
 

@@ -1,6 +1,7 @@
 package leibniz
 
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 import leibniz.variance.{Contravariant, Covariant}
 
 /**
@@ -123,17 +124,8 @@ object As {
     def substCt[F[-_]](fa: F[A]): F[A] = fa
   }
 
-  implicit def proposition[A, B]: Proposition[As[A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[As[A, B]]
-  }
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe.
-    */
-  def force[A, B](implicit unsafe: Unsafe): A <~< B =
-    unsafe.coerceK2_1[<~<, A, B](refl[Any])
+  implicit def proposition[A, B]: Proposition[As[A, B]] =
+    Proposition.force[As[A, B]](Unsafe.unsafe)
 
   /**
     * Subtyping relation is reflexive.
@@ -150,9 +142,8 @@ object As {
     * not true in Scala until [[https://issues.scala-lang.org/browse/SI-7278
     * SI-7278]] is fixed.
     */
-  def bracket[A, B, C](f: A <~< B, g: B <~< A)(implicit unsafe: Unsafe): A === B =
-    Is.force[A, B]
-
+  def bracket[A, B](f: A <~< B, g: B <~< A)(implicit unsafe: Unsafe): A === B =
+    Axioms.bracket[A, B](f, g)
 
   def pair[A1, B1, A2, B2] (eq1: A1 <~< B1, eq2: A2 <~< B2): Pair[A1, B1, A2, B2] =
     Pair(eq1, eq2)
@@ -163,6 +154,7 @@ object As {
       type f2[+a2] = F[A1, A2] <~< F[B1, a2]
       eq2.substCo[f2](eq1.substCo[f1](refl[F[A1, A2]]))
     }
+
     def liftCt[F[-_, -_]]: F[B1, B2] <~< F[A1, A2] = {
       type f1[+a1] = F[a1, A2] <~< F[A1, A2]
       type f2[+a2] = F[B1, a2] <~< F[A1, A2]
@@ -171,31 +163,35 @@ object As {
 
     def substCo[F[+_, +_]](value: F[A1, A2]): F[B1, B2] =
       liftCo[F].apply(value)
+
     def substCt[F[-_, -_]](value: F[B1, B2]): F[A1, A2] =
       liftCt[F].apply(value)
   }
 
   implicit final class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
-    import Unsafe._
-
     def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As F[B] =
       F.lift(ab)
 
     def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
-      force[F[B], F[A]]
+      F.lift(ab)
 
     def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
-      liftCoF[F].coerce(fa)
+      F.coerce(fa)(ab)
 
     def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
-      liftCtF[F].coerce(fb)
+      F.coerce(fb)(ab)
   }
 
   /**
     * Given `A <:< B`, prove `A <~< B`
     */
-  def fromPredef[A, B](eq: A <:< B): A <~< B = {
-    import Unsafe._
-    force[A, B]
-  }
+  def fromPredef[A, B](ev: A <:< B): A <~< B =
+    Axioms.predefConformity[A, B](ev)
+
+  /**
+    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
+    * explicitly coerce types. It is unsafe.
+    */
+  def force[A, B](implicit unsafe: Unsafe): A <~< B =
+    unsafe.coerceK2_1[<~<, A, B](refl[Any])
 }

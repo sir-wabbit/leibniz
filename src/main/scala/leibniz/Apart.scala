@@ -1,5 +1,6 @@
 package leibniz
 
+import leibniz.internal.Unsafe
 import leibniz.variance.Constant
 
 /**
@@ -34,8 +35,8 @@ sealed abstract class Apart[A, B] { nab =>
     * one of them.
     */
   def compare[C](C: ConcreteType[C]): Either[Apart[A, C], Apart[B, C]] =
-    leftType.compare(C) match {
-      case Right(_) => rightType.compare(C) match {
+    ConcreteType.compare(leftType, C) match {
+      case Right(_) => ConcreteType.compare(rightType, C) match {
         case Right(_) => ???
         case Left(p) => Right(p)
       }
@@ -64,8 +65,15 @@ sealed abstract class Apart[A, B] { nab =>
   override def toString: String = s"$leftType =!= $rightType"
 }
 object Apart {
-  implicit def apply[A, B]: Apart[A, B] =
+  private[this] final class Instance[A, B]
+  (val leftType: ConcreteType[A], val rightType: ConcreteType[B], val weaken: A =!= B)
+    extends Apart[A, B]
+
+  implicit def summon[A, B]: Apart[A, B] =
     macro internal.MacroUtil.apart[A, B]
+
+  def make[A, B](weakApart: WeakApart[A, B], A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+    new Instance[A, B](A, B, weakApart)
 
   /**
     * Inequality is an irreflexive relation.
@@ -73,12 +81,6 @@ object Apart {
   def irreflexive[A](ev: Apart[A, A]): Void =
     ev.contradicts(Is.refl[A])
 
-  private[leibniz] final class Forced[A, B]
-  (val leftType: ConcreteType[A], val rightType: ConcreteType[B])
-  (implicit unsafe: Unsafe) extends Apart[A, B] {
-    def weaken: WeakApart[A, B] = WeakApart.force[A, B]
-  }
-
   def force[A, B](A: ConcreteType[A], B: ConcreteType[B])(implicit unsafe: Unsafe): Apart[A, B] =
-    (A compare B).left.get
+    ConcreteType.compare(A, B).left.get
 }

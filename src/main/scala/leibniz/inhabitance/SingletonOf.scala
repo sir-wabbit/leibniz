@@ -27,6 +27,8 @@ object SingletonOf {
     val isContractible: Contractible[A] = Contractible.singleton[A](new ValueOf[A](value))
   }
 
+  def apply[A, B](implicit ev: SingletonOf[A, B]): SingletonOf[A, B] = ev
+
   implicit def refl[A <: Singleton](implicit A: ValueOf[A]): SingletonOf[A, A] =
     new Refl[A](A.value)
 }

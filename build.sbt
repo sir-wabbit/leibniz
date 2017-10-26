@@ -30,7 +30,7 @@ lazy val commonSettings = List(
     Resolver.sonatypeRepo("snapshots"),
     Resolver.sonatypeRepo("releases")),
   libraryDependencies ++= testLibraries,
-  wartremoverErrors ++= List(Wart.AsInstanceOf, Wart.Nothing)
+  wartremoverErrors ++= List(Wart.AsInstanceOf)
 )
 
 val macroCompatVersion = "1.1.1"

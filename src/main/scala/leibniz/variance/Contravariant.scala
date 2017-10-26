@@ -2,6 +2,7 @@ package leibniz.variance
 
 import leibniz._
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 
 sealed trait Contravariant[F[_]] { F =>
   import Contravariant._
@@ -11,6 +12,11 @@ sealed trait Contravariant[F[_]] { F =>
   def substCt[G[-_], A, B](g: G[F[A]])(implicit ev: A <~< B): G[F[B]] = {
     type f[+x] = G[x] => G[F[B]]
     substCo[f, A, B](identity[G[F[B]]]).apply(g)
+  }
+
+  def coerce[A, B](value: F[B])(implicit ev: A <~< B): F[A] = {
+    type f[+x] = x
+    substCo[f, A, B](value)
   }
 
   def lift[A, B](ab: A <~< B): F[B] <~< F[A] = {
@@ -31,10 +37,8 @@ sealed trait Contravariant[F[_]] { F =>
     G.andThenCt[F](F)
 }
 object Contravariant {
-  implicit def proposition[F[_]]: Proposition[Contravariant[F]] = {
-    import leibniz.Unsafe._
-    Proposition.force[Contravariant[F]]
-  }
+  implicit def proposition[F[_]]: Proposition[Contravariant[F]] =
+    Proposition.force[Contravariant[F]](Unsafe.unsafe)
 
   def apply[F[_]](implicit ev: Contravariant[F]): Contravariant[F] = ev
 

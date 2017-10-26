@@ -1,6 +1,7 @@
 package leibniz
 
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 
 /**
   * The existence of a value of type `IsK[A, B]` implies that A ≡ B.
@@ -115,33 +116,19 @@ sealed abstract class IsK[A[_], B[_]] private[IsK]() { ab =>
 }
 
 object IsK {
-  implicit def proposition[A[_], B[_]]: Proposition[IsK[A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[IsK[A, B]]
-  }
-
-  def apply[A[_], B[_]](implicit ab: A =~= B): A =~= B = ab
-
   private[this] final case class Refl[A[_]]() extends IsK[A, A] {
     def subst[F[_[_]]](fa: F[A]): F[A] = fa
   }
-  private[this] val anyRefl: Any =~= Any = Refl[Any]()
 
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[A[_], B[_]](implicit unsafe: Unsafe): A =~= B =
-    unsafe.coerceK4_8[=~=, A, B].apply[Any, Any](anyRefl)
+  implicit def proposition[A[_], B[_]]: Proposition[IsK[A, B]] =
+    Proposition.force[IsK[A, B]](Unsafe.unsafe)
+
+  def apply[A[_], B[_]](implicit ab: A =~= B): A =~= B = ab
 
   /**
     * Equality is reflexive relation.
     */
-  implicit def refl[A[_]]: A =~= A = {
-    import Unsafe._
-    force[A, A]
-  }
+  implicit def refl[A[_]]: A =~= A = new Refl[A]()
 
   /**
     * Given `A =~= B` we can prove that `F[A] === F[B]`.
@@ -224,4 +211,12 @@ object IsK {
     type f3[j[_]] = F[A, I, M, ?] =~= F[B, J, j, ?]
     mn.subst[f3](ij.subst[f2](ab.subst[f1](refl[F[A, I, M, ?]])))
   }
+
+  /**
+    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
+    * explicitly coerce types. It is unsafe, but needed where Leibnizian
+    * equality isn't sufficient.
+    */
+  def force[A[_], B[_]](implicit unsafe: Unsafe): A =~= B =
+    unsafe.coerceK4_8[=~=, A, B].apply[Any, Any](refl[Any])
 }

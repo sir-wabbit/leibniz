@@ -1,11 +1,13 @@
 package leibniz
 
 import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 import leibniz.variance.{Contravariant, Covariant}
 
-sealed abstract class As1[A, B] {
+sealed abstract class As1[A, B] { ab =>
   type Upper >: A
   type Lower <: (B with Upper)
+
   def lower: A === Lower
   def upper: B === Upper
 
@@ -28,10 +30,20 @@ sealed abstract class As1[A, B] {
     type f[+x] = x
     substCo[f](a)
   }
+
+  def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As1 F[B] =
+    F.lift(ab.loosen).fix
+
+  def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As1 F[A] =
+    F.lift(ab.loosen).fix
+
+  def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
+    liftCoF[F].coerce(fa)
+
+  def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
+    liftCtF[F].coerce(fb)
 }
 object As1 {
-  def apply[A, B](implicit ev: A As1 B): A As1 B = ev
-
   private[this] final case class Refl[A]() extends As1[A, A] {
     type Lower = A
     type Upper = A
@@ -39,10 +51,10 @@ object As1 {
     def upper: A === A = Is.refl[A]
   }
 
-  implicit def proposition[A, B]: Proposition[As1[A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[As1[A, B]]
-  }
+  implicit def proposition[A, B]: Proposition[As1[A, B]] =
+    Proposition.force[As1[A, B]](Unsafe.unsafe)
+
+  def apply[A, B](implicit ev: A As1 B): A As1 B = ev
 
   def refl[A]: A As1 A = new Refl[A]()
 
@@ -58,18 +70,5 @@ object As1 {
     def upper: B Is Upper = b
   }
 
-  implicit final class As1Ops[A, B](val ab: As1[A, B]) extends AnyVal {
-    import Unsafe._
-    def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As1 F[B] =
-      F.lift(ab.loosen).fix
 
-    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As1 F[A] =
-      force[F[B], F[A]]
-
-    def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
-      liftCoF[F].coerce(fa)
-
-    def substCtF[F[_]](fb: F[B])(implicit F: Contravariant[F]): F[A] =
-      liftCtF[F].coerce(fb)
-  }
 }

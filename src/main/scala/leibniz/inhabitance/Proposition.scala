@@ -1,6 +1,7 @@
 package leibniz.inhabitance
 
 import leibniz._
+import leibniz.internal.Unsafe
 
 /**
   * Witnesses that all values (a: A) are equal.
@@ -19,23 +20,16 @@ object Proposition {
       Is.force[B, C]
   }
 
+  def apply[A](implicit A: Proposition[A]): Proposition[A] = A
+
   implicit def eq[A](implicit prop: Proposition[A]): Eq[A] = Eq.propositionEq[A]
+
+  implicit def prop[A](implicit prop: Proposition[A]): Proposition[Proposition[A]] =
+    force[Proposition[A]](Unsafe.unsafe)
+
+  implicit def singleton[A <: Singleton]: Proposition[A] =
+    force[A](Unsafe.unsafe)
 
   def force[A](implicit unsafe: Unsafe): Proposition[A] =
     new Forced[A]
-
-  implicit def prop[A](implicit prop: Proposition[A]): Proposition[Proposition[A]] = {
-    import Unsafe._
-    force[Proposition[A]]
-  }
-
-  implicit def singleton[A <: Singleton]: Proposition[A] = {
-    import Unsafe._
-    force[A]
-  }
-
-  def classically[A](proof: (A => Void) => Void)(implicit prop: Proposition[A]): A = {
-    import Unsafe._
-    unsafe.cps(proof)
-  }
 }

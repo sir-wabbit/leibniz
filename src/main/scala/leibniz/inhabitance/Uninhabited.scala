@@ -1,5 +1,6 @@
 package leibniz.inhabitance
 
+import leibniz.internal.Unsafe
 import leibniz.{<~<, ===, Void}
 
 sealed trait Uninhabited[-A] {
@@ -13,6 +14,8 @@ object Uninhabited {
     def contradicts(a: A): Void = f(a)
   }
 
+  def apply[A](implicit ev: Uninhabited[A]): Uninhabited[A] = ev
+
   def witness[A](f: A => Void): Uninhabited[A] = new Single[A](f)
 
   implicit def inhabited[A](implicit A: Uninhabited[A]): Inhabited[Uninhabited[A]] =
@@ -24,8 +27,6 @@ object Uninhabited {
   implicit def void: Uninhabited[Void] =
     witness(identity[Void])
 
-  implicit def proposition[A]: Proposition[Uninhabited[A]] = {
-    import leibniz.Unsafe._
-    Proposition.force[Uninhabited[A]]
-  }
+  implicit def proposition[A]: Proposition[Uninhabited[A]] =
+    Proposition.force[Uninhabited[A]](Unsafe.unsafe)
 }

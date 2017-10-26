@@ -5,6 +5,15 @@ import leibniz.{ConcreteType, Eq}
 import scala.reflect.macros.blackbox
 import scala.reflect.macros.whitebox
 
+trait TypeAlg[F[_]] {
+  def nothing: F[Unit]
+}
+//object TypeF {
+//  final case class TNothing[A] extends TypeF[A]
+//  final case class TAny extends TypeRepr
+//  final case class TWith[]
+//}
+
 sealed abstract class Shared[C <: blackbox.Context] {
   val c: C
   import c.universe._
@@ -12,6 +21,7 @@ sealed abstract class Shared[C <: blackbox.Context] {
 
   final val NothingType: Type = NothingClass.toType
   final val AnyType: Type = AnyClass.toType
+  final val AnyRefType: Type = typeOf[AnyRef]
 
   final val EqType: Symbol = typeOf[Eq[_]].typeSymbol
   final val EqTypeConstructor: Type = typeOf[Eq[_]].typeConstructor
@@ -129,7 +139,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
         if(decls.nonEmpty)
           c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
 
-        val parentTypes = parents.filterNot(_ =:= typeOf[AnyRef]).map { parent =>
+        val parentTypes = parents.filterNot(_ =:= AnyRefType).map { parent =>
           c.inferImplicitValue(appliedType(typeableTpe, List(parent)))
         }
 
@@ -169,7 +179,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
       val ca = makeConcreteType(ta)
       val cb = makeConcreteType(tb)
-      q"""_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.Unsafe.unsafe)"""
+      q"""_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.internal.Unsafe.unsafe)"""
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }
@@ -179,9 +189,9 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     val ta = weakTypeOf[A]
     val tb = weakTypeOf[B]
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
-      val ca = makeConcreteType(ta)
-      val cb = makeConcreteType(tb)
-      q"""_root_.leibniz.WeakApart.force[$ta, $tb](_root_.leibniz.Unsafe.unsafe)"""
+      // val ca = makeConcreteType(ta)
+      // val cb = makeConcreteType(tb)
+      q"""_root_.leibniz.WeakApart.force[$ta, $tb](_root_.leibniz.internal.Unsafe.unsafe)"""
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }

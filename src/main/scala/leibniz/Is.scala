@@ -1,6 +1,7 @@
 package leibniz
 
-import leibniz.inhabitance.{Contractible, Proposition}
+import leibniz.inhabitance.Proposition
+import leibniz.internal.Unsafe
 
 /**
   * The data type `Is` is the encoding of Leibnitz’ law which states that
@@ -155,24 +156,14 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
 }
 
 object Is {
-  implicit def proposition[A, B]: Proposition[Is[A, B]] = {
-    import leibniz.Unsafe._
-    Proposition.force[Is[A, B]]
-  }
+  implicit def proposition[A, B]: Proposition[Is[A, B]] =
+    Proposition.force[Is[A, B]](Unsafe.unsafe)
 
   def apply[A, B](implicit ev: A Is B): A Is B = ev
 
   final case class Refl[A]() extends Is[A, A] {
     def subst[F[_]](fa: F[A]): F[A] = fa
   }
-
-  /**
-    * Unsafe coercion between types. `force` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[A, B](implicit unsafe: Unsafe): A === B =
-    unsafe.coerceK2_1[===, A, B](refl[A])
 
   /**
     * Equality is reflexive relation.
@@ -226,8 +217,13 @@ object Is {
     * `A =:= B` implies `A === B` it is not the case that you can create
     * evidence of `A === B` except via a coercion. Use responsibly.
     */
-  def fromPredef[A, B](eq: A =:= B): A === B = {
-    import Unsafe._
-    force[A, B]
-  }
+  def fromPredef[A, B](eq: A =:= B): A === B = Axioms.predefEq(eq)
+
+  /**
+    * Unsafe coercion between types. `force` abuses `asInstanceOf` to
+    * explicitly coerce types. It is unsafe, but needed where Leibnizian
+    * equality isn't sufficient.
+    */
+  def force[A, B](implicit unsafe: Unsafe): A === B =
+    unsafe.coerceK2_1[===, A, B](refl[A])
 }

@@ -1,8 +1,12 @@
-package leibniz
+package leibniz.internal
+
+import leibniz.Void
 
 @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 final case class Unsafe private (value: Null) extends AnyVal {
   import Unsafe._
+
+  @inline def void[A](a: A): Void = ???
 
   @inline def cps[A](a: (A => Void) => Void): A = {
     val A: AnyRef = new AnyRef()
