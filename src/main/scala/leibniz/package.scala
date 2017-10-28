@@ -1,3 +1,5 @@
+import leibniz.inhabitance.SingletonOf
+
 package object leibniz {
   type Void <: Nothing with Void.Tag
 
@@ -7,4 +9,6 @@ package object leibniz {
 
   type <~<[-A, +B] = As[A, B]
   type >~>[+A, -B] = As[B, A]
+
+  type <::[A, +B] = SingletonOf[A, B]
 }

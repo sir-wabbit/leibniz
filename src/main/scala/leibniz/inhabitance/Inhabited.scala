@@ -7,10 +7,15 @@ import leibniz.{<~<, Void}
   * Witnesses that [[A]] is inhabited.
   */
 sealed abstract class Inhabited[+A] {
+  import Inhabited._
+
   def contradicts(f: A => Void): Void
 
   def widen[B](implicit p: A <~< B): Inhabited[B] =
     p.substCo[Inhabited](this)
+
+  def map[B](f: A => B): Inhabited[B] =
+    witness[B](k => contradicts(a => k(f(a))))
 }
 object Inhabited {
   private[this] final class Witness[A](a: (A => Void) => Void) extends Inhabited[A] {

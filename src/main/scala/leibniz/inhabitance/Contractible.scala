@@ -28,4 +28,6 @@ object Contractible {
 
   implicit def proposition[A]: Proposition[Contractible[A]] =
     Proposition.force[Contractible[A]](Unsafe.unsafe)
+
+  def force[A](A: Inhabited[A]): Contractible[A] = witness(A, Proposition.force[A](Unsafe.unsafe))
 }
