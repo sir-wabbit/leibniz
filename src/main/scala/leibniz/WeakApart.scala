@@ -2,7 +2,7 @@ package leibniz
 
 import leibniz.inhabitance.{Inhabited, Proposition, Uninhabited}
 import leibniz.internal.Unsafe
-import leibniz.variance.Constant
+import leibniz.variance.{Constant, Injective}
 
 /**
   * In constructive mathematics, an apartness relation is a constructive
@@ -40,9 +40,9 @@ sealed abstract class WeakApart[A, B] { nab =>
     * are apart, then any other element is apart from at least
     * one of them.
     */
-  def compare[C]: Cont[Void, Either[A =!= C, B =!= C]] = {
+  def compare[C]: Inhabited[Either[A =!= C, B =!= C]] = {
     val f: (A === C, B === C) => Void = (ac, bc) => nab.contradicts(ac andThen bc.flip)
-    Cont.and(f).map {
+    Inhabited.and(f).map {
       case Left(nac) => Left(witness(nac))
       case Right(nbc) => Right(witness(nbc))
     }
@@ -64,6 +64,9 @@ sealed abstract class WeakApart[A, B] { nab =>
     */
   def strengthen(implicit A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
     Apart.witness(this, A, B)
+
+  def lift[F[_]](implicit F: Injective[F]): F[A] =!= F[B] =
+    witness[F[A], F[B]](p => contradicts(F.proof(p)))
 }
 object WeakApart {
   private[this] final class Witness[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {

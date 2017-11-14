@@ -11,6 +11,10 @@ class EqTest extends FunSuite with Matchers {
   Cosingleton[0]
   Cosingleton[Int]
 
+  final val x0 = 0
+
+//  MacroTest.run[x0.type]
+
   test("doubles") {
     val values: Array[Double] = Array(
       java.lang.Double.longBitsToDouble(0x7ff8000000000000L), // NaN

@@ -1,5 +1,9 @@
 addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full)
 
+autoCompilerPlugins := true
+
+addCompilerPlugin("com.lihaoyi" %% "acyclic" % "0.1.7")
+
 val testLibraries = List(
   "org.scalacheck" %% "scalacheck" % "1.13.5" % "test",
   "org.typelevel" %% "discipline" % "0.8" % "test",
@@ -11,7 +15,7 @@ val catsLibraries = List(
 lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   organization      := "com.alexknvl",
-  version           := "0.11.0-SNAPSHOT",
+  version           := "0.12.0-SNAPSHOT",
   scalaVersion      := "2.12.1",
   scalaOrganization := "org.typelevel",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
@@ -43,3 +47,4 @@ lazy val root = (project in file("."))
   .settings(libraryDependencies ++= Seq(
     scalaOrganization.value % "scala-compiler" % scalaVersion.value,
     "org.typelevel" %% "macro-compat" % macroCompatVersion))
+  .settings(libraryDependencies += "com.lihaoyi" %% "acyclic" % "0.1.7" % "provided")

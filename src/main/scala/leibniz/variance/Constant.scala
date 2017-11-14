@@ -18,21 +18,19 @@ sealed trait Constant[F[_]] { F =>
     witness[λ[x => F[G[x]]], Void, Unit](Void.isNotUnit, proof[G[Void], G[Unit]])
 
   def andThenCo[G[_]](implicit G: Covariant[G]): Constant[λ[x => G[F[x]]]] = {
-    import leibniz.internal.Unsafe._
+    val p : F[Void] <~< F[Unit] = F.proof[Void, Unit].toAs
+    val q : F[Unit] <~< F[Void] = F.proof[Unit, Void].toAs
+    val r: G[F[Void]] === G[F[Unit]] = As.bracket(G.lift(p), G.lift(q))(Unsafe.unsafe)
 
-    val p: G[F[Unit]] === G[F[Void]] =
-      As.bracket(G.lift(F.proof[Unit, Void].toAs), G.lift(F.proof[Void, Unit].toAs))
-
-    witness[λ[x => G[F[x]]], Void, Unit](Void.isNotUnit, p.flip)
+    witness[λ[x => G[F[x]]], Void, Unit](Void.isNotUnit, r)
   }
 
   def andThenCt[G[_]](implicit G: Contravariant[G]): Constant[λ[x => G[F[x]]]] = {
-    import leibniz.internal.Unsafe._
+    val p : F[Void] <~< F[Unit] = F.proof[Void, Unit].toAs
+    val q : F[Unit] <~< F[Void] = F.proof[Unit, Void].toAs
+    val r: G[F[Void]] === G[F[Unit]] = As.bracket(G.lift(q), G.lift(p))(Unsafe.unsafe)
 
-    val p: G[F[Unit]] === G[F[Void]] =
-      As.bracket(G.lift(F.proof[Void, Unit].toAs), G.lift(F.proof[Unit, Void].toAs))
-
-    witness[λ[x => G[F[x]]], Void, Unit](Void.isNotUnit, p.flip)
+    witness[λ[x => G[F[x]]], Void, Unit](Void.isNotUnit, r)
   }
 
   def asCovariant: Covariant[F] = Covariant.witness[F, Void, Unit](
@@ -59,6 +57,14 @@ object Constant {
 
   implicit def const[A]: Constant[λ[X => A]] =
     witness[λ[X => A], Void, Unit](Void.isNotUnit, Is.refl[A])
+
+  def bracket[F[_]](covariant: Covariant[F], contravariant: Contravariant[F]): Constant[F] = {
+    val p :   Void  <~<   Unit  = As.reify[Void, Unit]
+    val q : F[Void] <~< F[Unit] = covariant.lift(p)
+    val r : F[Unit] <~< F[Void] = contravariant.lift(p)
+    val s : F[Void] === F[Unit] = Axioms.bracket(q, r)(Unsafe.unsafe)
+    witness[F, Void, Unit](Void.isNotUnit, s)
+  }
 
   /**
     * `unsafeForce` abuses `asInstanceOf` to explicitly coerce types.

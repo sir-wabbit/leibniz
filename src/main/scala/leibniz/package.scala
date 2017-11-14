@@ -11,4 +11,6 @@ package object leibniz {
   type >~>[+A, -B] = As[B, A]
 
   type <::[A, +B] = SingletonOf[A, B]
+
+  type TypeHolder[T] = Null { type Type = T }
 }

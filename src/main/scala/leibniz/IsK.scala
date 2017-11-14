@@ -142,6 +142,11 @@ object IsK {
     ab.subst[f](Is.refl)
   }
 
+  def const[A, B](ab: A === B): λ[x => A] =~= λ[x => B] = {
+    type f[a] = λ[x => A] =~= λ[x => a]
+    ab.subst[f](IsK.refl[λ[x => A]])
+  }
+
   /**
     * Given `A =~= B` and `I =~= J` we can prove that
     * `F[A, I] === F[B, J]`.

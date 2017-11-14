@@ -1,19 +1,12 @@
-package leibniz.internal
+package leibniz
+package internal
 
-import leibniz.{ConcreteType, Eq}
+import leibniz.inhabitance.{Contractible, Inhabited, SingletonOf}
 
 import scala.reflect.macros.blackbox
 import scala.reflect.macros.whitebox
 
-trait TypeAlg[F[_]] {
-  def nothing: F[Unit]
-}
-//object TypeF {
-//  final case class TNothing[A] extends TypeF[A]
-//  final case class TAny extends TypeRepr
-//  final case class TWith[]
-//}
-
+@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 sealed abstract class Shared[C <: blackbox.Context] {
   val c: C
   import c.universe._
@@ -34,9 +27,68 @@ sealed abstract class Shared[C <: blackbox.Context] {
         case TypeRef(_, EqType, List(result)) => Some((exactEq, result))
         case _ => None
       }
-    } else {
-      println(tpe)
-      None
+    } else None
+  }
+
+  /**
+    * 0, null, "a", a.type | supported for types with Eq
+    *
+    * ExistentialType      | nominalRef[ExistentialType]("ExistentialType"): T[ExistentialType]
+    * ClassName            | nominalRef[ClassName]("ClassName"): T[ClassName]
+    * F[A]                 | nominalRef1[F, A]("F", T[A]): T[F[A]]
+    * F[G]                 | nominalRef2[G, A]("F"
+    *
+    * A with B             | unsupported
+    *
+    * A { ... }            | unsupported
+    * A forSome { ... }    | unsupported
+    */
+  trait TypeTermAlg[T] {
+    def nominal(name: String, args: List[T]): T
+    def singleton(tpe: T, value: Tree, eq: Tree): T
+  }
+
+  def foldTypeRef[T](tpe: Type)(alg: TypeTermAlg[T]): T = {
+    tpe.dealias match {
+      case t if (t <:< NothingType) && (NothingType <:< t) =>
+        alg.nominal("scala.Nothing", Nil)
+
+      case t if (t <:< AnyType)     && (AnyType <:< t)     =>
+        alg.nominal("scala.Any", Nil)
+
+      case SingleType(_, path) =>
+        findCosingleton(tpe) match {
+          case Some((eq, cosingleton)) =>
+            val parent = foldTypeRef[T](cosingleton)(alg)
+            alg.singleton(parent, q"$path.asInstanceOf[$tpe]", eq)
+
+          case None =>
+            c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
+        }
+
+      case ConstantType(value) =>
+        findCosingleton(tpe) match {
+          case Some((eq, cosingleton)) =>
+            val parent = foldTypeRef[T](cosingleton)(alg)
+            alg.singleton(parent, q"$value.asInstanceOf[$tpe]", eq)
+
+          case None =>
+            c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
+        }
+
+//      case RefinedType(parents, decls) =>
+//        // a with b { }
+//        if(decls.nonEmpty)
+//          c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
+//
+//        parents.map(go).reduce(alg.intersection).asInstanceOf[T[A]]
+
+      case t: TypeRef if t.sym.isClass =>
+        val args = t.typeArgs.map(foldTypeRef[T](_)(alg))
+        alg.nominal(t.typeSymbol.fullName, args)
+
+      case x =>
+        c.abort(c.enclosingPosition, s"$tpe (${x.getClass}).")
     }
   }
 }
@@ -60,7 +112,6 @@ final class Whitebox(val c: whitebox.Context) extends Shared[whitebox.Context] {
 final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] {
   import c.universe._
   import internal._
-
 
   val typeableTpe = typeOf[ConcreteType[_]].typeConstructor
 
@@ -88,6 +139,16 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
       case _ =>
         false
     }
+  }
+
+  def info[A : c.WeakTypeTag]: c.Tree = {
+    println(foldTypeRef[String](weakTypeTag[A].tpe)(new TypeTermAlg[String] {
+      type T = String
+      def nominal(name: String, args: List[T]): T =
+        name + (if (args.nonEmpty) "[" + args.mkString(", ") + "]" else "")
+      def singleton(tpe: T, value: Tree, eq: Tree): T = tpe + "(" + value + ")"
+    }))
+    c.abort(c.enclosingPosition, "info")
   }
 
   def makeConcreteType(tpe: Type): c.Tree = {

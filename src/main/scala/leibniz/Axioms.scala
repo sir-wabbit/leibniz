@@ -7,6 +7,19 @@ import leibniz.internal.Unsafe
   * These are some non-trivial axioms that the library uses.
   */
 object Axioms {
+  type TypeConstructorParametricity <: Null
+  type ClassicalPropositions <: Null
+  type StandardLibrary <: Null
+  type BoundedEquality <: Null
+  type SubtypeBracket <: Null
+  type BoundSquashing <: Null
+
+  /**
+    *
+    */
+  def tcIntersection[F[_], A, B]: F[A with B] === (F[A] with F[B]) =
+    Is.force[F[A with B], (F[A] with F[B])](Unsafe.unsafe)
+
   /**
     * (f a = f b) ∧ ¬(a = b) => ∀ x y. f x = f y
     */
@@ -21,17 +34,18 @@ object Axioms {
     Unsafe.unsafe.coerceK2_1[As, F[X], F[Y]](q)
 
   /**
-    * ¬a => a = ⊥
+    * (∀ x . f x = g x) => f = g
     */
-  def nullivalence[A](ab: A => Void)(implicit unsafe: Unsafe): A === Void =
-    unsafe.coerceK2_1[Is, A, Void](Is.refl[A])
+  def tcExtensionality[F[_], G[_]]: TCExtensionality[F, G] = new TCExtensionality[F, G]
 
+  final class TCExtensionality[F[_], G[_]](val b: Boolean = true) extends AnyVal {
+    type T
+    def apply(uv: F[T] === G[T]): F =~= G =
+      Unsafe.unsafe.coerceK4_8[=~=, F, G](IsK.refl[F])
 
-  /**
-    * ¬¬a ∧ isProp(a) => a
-    */
-  def classical[A](proof: (A => Void) => Void)(implicit prop: Proposition[A], unsafe: Unsafe): A =
-    unsafe.cps(proof)
+    def applyT(f: TypeHolder[T] => (F[T] === G[T])): F =~= G =
+      apply(f(TypeHolder[T]))
+  }
 
   /**
     *

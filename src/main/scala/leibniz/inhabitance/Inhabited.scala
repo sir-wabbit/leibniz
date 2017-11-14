@@ -6,7 +6,7 @@ import leibniz.{<~<, Void}
 /**
   * Witnesses that [[A]] is inhabited.
   */
-sealed abstract class Inhabited[+A] {
+sealed abstract class Inhabited[+A] { a =>
   import Inhabited._
 
   def contradicts(f: A => Void): Void
@@ -15,7 +15,13 @@ sealed abstract class Inhabited[+A] {
     p.substCo[Inhabited](this)
 
   def map[B](f: A => B): Inhabited[B] =
-    witness[B](k => contradicts(a => k(f(a))))
+    witness[B](k => a.contradicts(a => k(f(a))))
+
+  def flatMap[B](f: A => Inhabited[B]) =
+    witness[B](k => a.contradicts(a => f(a).contradicts(k)))
+
+  def zip[B](b: Inhabited[B]): Inhabited[(A, B)] =
+    flatMap(a => b.flatMap(b => Inhabited.value((a, b))))
 }
 object Inhabited {
   private[this] final class Witness[A](a: (A => Void) => Void) extends Inhabited[A] {
@@ -29,6 +35,12 @@ object Inhabited {
 
   def value[A](a: A): Inhabited[A] =
     witness[A](f => f(a))
+
+  def map2[A, B, C](f: (A, B) => C)(implicit A: Inhabited[A], B: Inhabited[B]): Inhabited[C] =
+    for {
+      a <- A
+      b <- B
+    } yield f(a, b)
 
   implicit def singleton[A <: Singleton](implicit A: ValueOf[A]): Inhabited[A] =
     witness(f => f(A.value))
@@ -44,4 +56,16 @@ object Inhabited {
 
   implicit def contractible[A](implicit A: Inhabited[A]): Contractible[Inhabited[A]] =
     Contractible.witness[Inhabited[A]](inhabited, proposition[A])
+
+  def lem[A]: Inhabited[Either[A => Void, A]] =
+    witness(k => k(Left(a => k(Right(a)))))
+
+  def and[A, B](f: (A, B) => Void): Inhabited[Either[A => Void, B => Void]] =
+    witness(p => p(Right(b => p(Left(a => f(a, b))))))
+
+  def imp[A, B](f: A => B): Inhabited[Either[A => Void, B]] =
+    witness(k => k(Left(a => k(Right(f(a))))))
+
+  def pierce[A]: Inhabited[((A => Void) => A) => A] =
+    witness(k => k((p: (A => Void) => A) => p((a: A) => k(_ => a))))
 }

@@ -1,40 +1,35 @@
 package leibniz
 
-sealed abstract class ConcreteType[A](val description: String) extends Product with Serializable
+sealed abstract class ConcreteType[A] extends Product with Serializable
 
 object ConcreteType {
   implicit def apply[A]: ConcreteType[A] =
     macro internal.MacroUtil.concreteType[A]
 
-  def compare[A, B](A: ConcreteType[A], B: ConcreteType[B]): Either[Apart[A, B], A === B] =
-    (A, B) match {
-      case (CTNothing, CTNothing) => Right(Is.refl[Nothing])
-      case (CTAny, CTAny) => Right(Is.refl[Any])
-      // case (CTWiththat: CTIntersection[B] => this.parents.toSet == that.parents.toSet
-//      case (CTSingleton(va, eqa, pa), CTSingleton(vb, eqb, pb)) =>
-//        compare(pa, pb) match {
-//          case Right(ab) => eqa.eqProof(va, vb) match {
-//            case Some(p) => Right(p)
-//            case None => Left()
-//          }
-//        }
-//        (this.parent equal that.parent) &&
-//          eq.eqv(this.value.asInstanceOf[A], that.value.asInstanceOf[A])
-//      case b: CTRef[B] =>
-//        name == b.name && params.sameElements(b.params)
-    }
+  type Type[A] = ConcreteType[A]
 
-  final case object CTNothing extends ConcreteType[Nothing]("Nothing")
-  final case object CTAny extends ConcreteType[Any]("Any")
-
-  final case class CTWith[A](parents: Array[ConcreteType[_]])
-    extends ConcreteType[A](parents.mkString(" with "))
+  def compare[A, B](A: Type[A], B: Type[B]): Either[Apart[A, B], A === B] = {
+    import leibniz.internal.Unsafe.unsafe
+    if (A == B) Right(Is.force[A, B])
+    else Left(Apart.force[A, B](A, B))
+  }
 
   final case class CTSingleton[A, L <: A with Singleton]
-  (value: L, eq: Eq[A], parent: ConcreteType[A])
-    extends ConcreteType[L](s"$parent($value)")
+  (parent: Type[A], value: L, eq: Eq[A]) extends Type[L] {
+    override def equals(other: Any): Boolean = other match {
+      case that: CTSingleton[a, l] =>
+        this.parent == that.parent &&
+          this.eq.eqv(this.value, that.value.asInstanceOf[A])
+      case _ => false
+    }
+  }
 
-  final case class CTRef[A](name: String, params: Array[ConcreteType[_]])
-    extends ConcreteType[A](name + (if (params.isEmpty) "" else
-      "[" + params.map(_.toString()).mkString(", ") + "]"))
+  final case class CTNominal[A](name: String, args: List[Type[_]]) extends Type[A] {
+    override def equals(other: Any): Boolean = other match {
+      case that: CTNominal[b] =>
+          this.name == that.name &&
+          this.args == that.args
+      case _ => false
+    }
+  }
 }

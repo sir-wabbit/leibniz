@@ -1,8 +1,6 @@
 package leibniz
 package inhabitance
 
-import leibniz.internal.Unsafe
-
 /**
   * Witnesses that all `(a: A)` are equal, that [[A <~< B]],
   * and that [[A]] is inhabited.
@@ -10,45 +8,91 @@ import leibniz.internal.Unsafe
 sealed abstract class SingletonOf[A, +B] { ab =>
   import SingletonOf._
 
+  /**
+    * A singleton type conforms to its widened type.
+    */
   def conforms: A <~< B
 
+  /**
+    * A singleton type is always inhabited.
+    */
   def isInhabited: Inhabited[A]
 
+  /**
+    * A singleton type is a mere proposition, all of its inhabited subtypes
+    * (there is only one) are equal.
+    */
   def isProposition: Proposition[A]
 
+  /**
+    * A singleton type is contractible, all of its inhabited subtypes
+    * (there is only one, A) are equal to A.
+    */
   def isContractible: Contractible[A]
 
+  /**
+    * If [[A]] is a singleton of type [[B]], and [[B]] is a singleton of type [[C]],
+    * then [[A]] is a singleton of type [[C]]
+    */
   def andThen[BB >: B, C](bc: SingletonOf[BB, C]): SingletonOf[A, C] =
     witness[A, C](isInhabited.contradicts, conforms andThen bc.conforms, isProposition)
 
+  /**
+    * If [[Z]] is a singleton of type [[A]], and [[A]] is a singleton of type [[B]],
+    * then [[Z]] is a singleton of type [[B]]
+    */
   def compose[Z](za: SingletonOf[Z, A]): SingletonOf[Z, B] =
     za andThen ab
 
+  /**
+    * All inhabited subtypes of a singleton are equal.
+    */
   def contract[C](implicit C: Inhabited[C], ca: C <~< A): C === A =
     isContractible.contract[C](ca, C)
+
+  /**
+    * All inhabited subtypes of a singleton are equal.
+    */
   def contract_(c: A): c.type === A =
     contract[c.type](Inhabited.value(c), As.refl[c.type])
 
+  /**
+    * All inhabited subtypes of a singleton are equal.
+    */
   def equal[X <: A, Y <: A](x: X, y: Y): X === Y =
     isProposition.equal[X, Y](
       As.refl[X], As.refl[Y],
       Inhabited.value(x), Inhabited.value(y))
+
+  /**
+    * All inhabited subtypes of a singleton are equal.
+    */
   def equal_(x: A, y: A): x.type === y.type =
     equal[x.type, y.type](x, y)
 
-  def pi[F[_]](a: A)(f: Pi[B, F]): F[a.type] = {
-    trait Sigma[+A] {
-      val x: A
-      val p: x.type === a.type
-    }
+  def piSigma[F[_]](a: A)(f: Pi[B, F]): Sigma[A, F] = {
+    val s = Sigma[A, λ[x => x === a.type]](a)(Is.refl[a.type])
+    type f[+x] = Sigma[x, λ[x => x === a.type]]
+    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCo[f](s)
 
-    val s = new Sigma[A] {
-      val x = a
-      val p = Is.force[x.type, a.type](Unsafe.unsafe)
-    }
+    val p : b.first.type === a.type = b.second
+    Sigma.apply[A, F](a)(b.second.subst[F](f(b.first)))
+  }
 
-    val b: Sigma[B] = conforms.substCo[Sigma](s)
-    b.p.subst[F](f(b.x))
+  def pi[F[_]](a: A)(f: Pi[B, F]): F[A] = {
+    val s = Sigma[A, λ[x => x === A]](a)(contract_(a))
+    type f[+x] = Sigma[x, λ[x => x === A]]
+    val b: Sigma[B, λ[x => x === A]] = conforms.substCo[f](s)
+
+    b.second.subst[F](f(b.first))
+  }
+
+  def pi_[F[_]](a: A)(f: Pi[B, F]): F[a.type] = {
+    val s = Sigma[A, λ[x => x === a.type]](a)(Is.refl[a.type])
+    type f[+x] = Sigma[x, λ[x => x === a.type]]
+    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCo[f](s)
+
+    b.second.subst[F](f(b.first))
   }
 }
 object SingletonOf {
