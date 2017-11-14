@@ -42,7 +42,7 @@ sealed trait Constant[F[_]] { F =>
 object Constant {
   private[leibniz] final class Witness[F[_], A, B](ab: A =!= B, fab: F[A] === F[B]) extends Constant[F] {
     def subst[G[_], X, Y](g: G[F[X]]): G[F[Y]] =
-      Axioms.tcParametricity[F, A, B, X, Y](ab.contradicts, fab).subst[G](g)
+      Axioms.tcParametricity[F, A, B, X, Y](fab, ab.contradicts).subst[G](g)
   }
 
   implicit def proposition[F[_]]: Proposition[Constant[F]] = {

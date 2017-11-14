@@ -65,6 +65,9 @@ sealed abstract class WeakApart[A, B] { nab =>
   def strengthen(implicit A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
     Apart.witness(this, A, B)
 
+  /**
+    * Given an injective [[F]], if `A ≠ B`, then `F[A] ≠ F[B]`.
+    */
   def lift[F[_]](implicit F: Injective[F]): F[A] =!= F[B] =
     witness[F[A], F[B]](p => contradicts(F.proof(p)))
 }

@@ -8,14 +8,6 @@ final case class Unsafe private (value: Null) extends AnyVal {
 
   @inline def void[A](a: A): Void = ???
 
-  @inline def cps[A](a: (A => Void) => Void): A = {
-    val A: AnyRef = new AnyRef()
-
-    try a(a => throw Return[A](A, a)) catch {
-      case Return(A, a) => a.asInstanceOf[A]
-    }
-  }
-
   // *
   @inline def coerceK0[A]: Unsafe.PartialK0[A] =
     Unsafe.PartialK0[A]()
@@ -93,9 +85,5 @@ object Unsafe {
 
   private[Unsafe] final case class PartialK4_8[F[_[_], _[_]], A[_], B[_]](b: Boolean = true) extends AnyVal {
     @inline def apply[X[_], Y[_]](fa: F[X, Y]): F[A, B] = fa.asInstanceOf[F[A, B]]
-  }
-
-  final case class Return[A](tag: AnyRef, a: A) extends Throwable {
-    override def fillInStackTrace(): Throwable = this
   }
 }

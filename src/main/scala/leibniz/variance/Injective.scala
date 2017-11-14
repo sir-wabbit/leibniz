@@ -1,6 +1,7 @@
 package leibniz
 package variance
 
+import leibniz.inhabitance.{Inhabited, Uninhabited}
 import leibniz.internal.Unsafe
 
 sealed abstract class Injective[F[_]] { F =>
@@ -101,30 +102,39 @@ sealed abstract class Injective[F[_]] { F =>
     new Compose[G, F](G, F)
 }
 object Injective {
+  private[leibniz] final class Witness[F[_], X, Y](fxy: (F[X] === F[Y]) => Void) extends Injective[F] {
+    override def proof[A, B](ev: F[A] === F[B]): A === B =
+      Axioms.tcInjectivity[F, A, B, X, Y](ev, fxy)
+  }
+
   def apply[F[_]](implicit ev: Injective[F]): Injective[F] = ev
 
-//  def proveViaRetraction[F[_], R[_ <: F[_]]](p: λ[x => R[F[x]]] =~= λ[x => x]): Injective[F] = new Injective[F] {
-//    override def monomorphism[G[_], H[_]](q: λ[x => F[G[x]]] =~= λ[x => F[H[x]]]): G =~= H = {
-//
-//    }
-//  }
+  def witness[F[_], A, B](fnab: (F[A] === F[B]) => Void): Injective[F] =
+    new Witness[F, A, B](fnab)
 
-//  final class FromRetraction[F[_], R[_ <: F[_]]] extends Injective[F] {
-//    type Retraction[X <: F[_]]
-//    def retraction[A]: Retraction[F[A]] === A = Is.force[Retraction[F[A]], A]
-//  }
+  def witness1[F[_], G[_], A, B](x: G[F[A]], y: G[F[B]] => Void): Injective[F] =
+    witness[F, A, B] { ab =>
+      type f[x] = G[x]
+      y(ab.subst[f](x))
+    }
 
-//  class Foo[A] { final type Type = A }
-//
-//  final case class FooInj() extends Injective[Foo] {
-//    final type Retraction[X <: Foo[_]] = X#Type
-//    implicitly[Retraction[Foo[Int]] <:< Int]
-//    override def retraction[A]: Retraction[Foo[A]] === A = Is.refl[A]
-//  }
+  def witness2[F[_], G[_], A, B](x: Inhabited[G[F[A]]], y: Uninhabited[G[F[B]]]): Injective[F] =
+    witness[F, A, B] { ab =>
+      type f[x] = Inhabited[G[x]]
+      ab.subst[f](x).contradicts(y.contradicts)
+    }
 
-  final case class Id() extends Injective[λ[X => X]] {
-    override def monomorphism[G[_], H[_]](p: λ[x => G[x]] =~= λ[x => H[x]]): =~=[G, H] = p
-  }
+  def viaRetraction[F[_], R[_ <: F[_]]](retraction: λ[x => R[F[x]]] =~= λ[x => x]): Injective[F] =
+    witness[F, Void, Unit] { ab =>
+      val p = Leibniz.fromIs[Nothing, F[_], F[Void], F[Unit]](ab)
+      val r: R[F[Unit]] === R[F[Void]] = p.lift[Nothing, Any, R].toIs.flip
+      val q: R[F[Void]] === Void = retraction.lower[λ[x[_] => x[Void]]]
+      val s: Unit === R[F[Unit]] = retraction.flip.lower[λ[x[_] => x[Unit]]]
+
+      (s andThen r andThen q).coerce(())
+    }
+
+  val id: Injective[λ[X => X]] = witness[λ[X => X], Void, Unit](Void.isNotUnit.contradicts)
 
   final case class Compose[F[_], G[_]](F: Injective[F], G: Injective[G]) extends Injective[λ[x => F[G[x]]]] {
     override def proof[A, B](ev: F[G[A]] === F[G[B]]): A === B =
@@ -136,6 +146,6 @@ object Injective {
     * It is unsafe, but necessary in most cases.
     */
   def force[F[_]](implicit unsafe: Unsafe): Injective[F] = {
-    unsafe.coerceK2_2[Injective, F].apply[λ[X => X]](Id())
+    unsafe.coerceK2_2[Injective, F].apply[λ[X => X]](id)
   }
 }
