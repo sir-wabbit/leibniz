@@ -1,4 +1,5 @@
-package leibniz.inhabitance
+package leibniz
+package inhabitance
 
 import leibniz.internal.Unsafe
 import leibniz.{<~<, Void}
@@ -6,13 +7,12 @@ import leibniz.{<~<, Void}
 /**
   * Witnesses that [[A]] is inhabited.
   */
-sealed abstract class Inhabited[+A] { a =>
+sealed abstract class Inhabited[A] { a =>
   import Inhabited._
 
   def contradicts(f: A => Void): Void
 
-  def widen[B](implicit p: A <~< B): Inhabited[B] =
-    p.substCo[Inhabited](this)
+  def widen[B](implicit p: A <~< B): Inhabited[B]
 
   def map[B](f: A => B): Inhabited[B] =
     witness[B](k => a.contradicts(a => k(f(a))))
@@ -23,9 +23,16 @@ sealed abstract class Inhabited[+A] { a =>
   def zip[B](b: Inhabited[B]): Inhabited[(A, B)] =
     flatMap(a => b.flatMap(b => Inhabited.value((a, b))))
 }
-object Inhabited {
-  private[this] final class Witness[A](a: (A => Void) => Void) extends Inhabited[A] {
+trait InhabitedLowerPriority {
+  implicit def mkInhabited[A]: Inhabited[A] =
+    macro internal.MacroUtil.mkInhabited[A]
+}
+object Inhabited extends InhabitedLowerPriority {
+  private[this] final class Witness[+A](a: (A => Void) => Void) extends Inhabited[A] {
     def contradicts(f: A => Void): Void = a(f)
+
+    def widen[B](implicit p: A <~< B): Inhabited[B] =
+      p.substCo[Witness](this)
   }
 
   def apply[A](implicit A: Inhabited[A]): Inhabited[A] = A
@@ -37,10 +44,7 @@ object Inhabited {
     witness[A](f => f(a))
 
   def map2[A, B, C](f: (A, B) => C)(implicit A: Inhabited[A], B: Inhabited[B]): Inhabited[C] =
-    for {
-      a <- A
-      b <- B
-    } yield f(a, b)
+    for { a <- A; b <- B } yield f(a, b)
 
   implicit def singleton[A <: Singleton](implicit A: ValueOf[A]): Inhabited[A] =
     witness(f => f(A.value))

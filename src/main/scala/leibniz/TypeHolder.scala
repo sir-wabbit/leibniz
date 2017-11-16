@@ -1,6 +1,8 @@
 package leibniz
 
-@SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 object TypeHolder {
-  def apply[T]: TypeHolder[T] = null.asInstanceOf[TypeHolder[T]]
+  trait Tag extends Any
+
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
+  def apply[T]: TypeHolder[T] = ().asInstanceOf[TypeHolder[T]]
 }

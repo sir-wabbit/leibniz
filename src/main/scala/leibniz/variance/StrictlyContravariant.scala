@@ -46,6 +46,8 @@ object StrictlyContravariant {
     def contravariant: Contravariant[F] = C
   }
 
-  def witness[F[_]](I: Injective[F], C: Contravariant[F]): StrictlyContravariant[F] =
+  def apply[F[_]](implicit F: StrictlyContravariant[F]): StrictlyContravariant[F] = F
+
+  implicit def witness[F[_]](implicit I: Injective[F], C: Contravariant[F]): StrictlyContravariant[F] =
     new Witness[F](I, C)
 }

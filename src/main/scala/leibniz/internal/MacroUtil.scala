@@ -5,6 +5,9 @@ import leibniz.inhabitance.{Contractible, Inhabited, SingletonOf}
 
 import scala.reflect.macros.blackbox
 import scala.reflect.macros.whitebox
+import scala.tools.nsc.ast.NodePrinters
+
+import scala.reflect.internal.Types
 
 @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
 sealed abstract class Shared[C <: blackbox.Context] {
@@ -15,6 +18,18 @@ sealed abstract class Shared[C <: blackbox.Context] {
   final val NothingType: Type = NothingClass.toType
   final val AnyType: Type = AnyClass.toType
   final val AnyRefType: Type = typeOf[AnyRef]
+
+  final val inhabitants: Map[Type, Tree] = Map(
+    typeOf[Unit]    -> q"()",
+    typeOf[Boolean] -> q"false",
+    typeOf[Byte]    -> q"0.toByte",
+    typeOf[Short]   -> q"0.toShort",
+    typeOf[Int]     -> q"0",
+    typeOf[Long]    -> q"0L",
+    typeOf[Float]   -> q"0.0f",
+    typeOf[Double]  -> q"0.0d",
+    typeOf[Symbol]  -> q"'a",
+    typeOf[String]  -> q""" "" """)
 
   final val EqType: Symbol = typeOf[Eq[_]].typeSymbol
   final val EqTypeConstructor: Type = typeOf[Eq[_]].typeConstructor
@@ -43,55 +58,78 @@ sealed abstract class Shared[C <: blackbox.Context] {
     * A { ... }            | unsupported
     * A forSome { ... }    | unsupported
     */
-  trait TypeTermAlg[T] {
-    def nominal(name: String, args: List[T]): T
-    def singleton(tpe: T, value: Tree, eq: Tree): T
+  trait TypeRefAlg[A] {
+    def nominal(tpe: Type, name: String, args: List[A]): A
+    def singleton(tpe: Type, parent: A, value: Tree, eq: Tree): A
+  }
+  def foldConcreteType[T](tpe: Type)(alg: TypeRefAlg[T]): T = tpe.dealias match {
+    case t if (t <:< NothingType) && (NothingType <:< t) =>
+      alg.nominal(NothingType, "scala.Nothing", Nil)
+
+    case t if (t <:< AnyType) && (AnyType <:< t) =>
+      alg.nominal(AnyType, "scala.Any", Nil)
+
+    case tpe@SingleType(_, path) =>
+      findCosingleton(tpe) match {
+        case Some((eq, cosingleton)) =>
+          val parent = foldConcreteType[T](cosingleton)(alg)
+          alg.singleton(tpe, parent, q"$path.asInstanceOf[$tpe]", eq)
+
+        case None =>
+          c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
+      }
+
+    case tpe@ConstantType(value) =>
+      findCosingleton(tpe) match {
+        case Some((eq, cosingleton)) =>
+          val parent = foldConcreteType[T](cosingleton)(alg)
+          alg.singleton(tpe, parent, q"$value.asInstanceOf[$tpe]", eq)
+
+        case None =>
+          c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
+      }
+
+    case tpe: TypeRef if tpe.sym.isClass =>
+      val args = tpe.typeArgs.map(foldConcreteType[T](_)(alg))
+      alg.nominal(tpe, tpe.typeSymbol.fullName, args)
+
+    case x =>
+      c.abort(c.enclosingPosition, s"$tpe is not a concrete type (${x.getClass}).")
+
+//    case RefinedType(parents, decls) =>
+//      // a with b { }
+//      if(decls.nonEmpty)
+//        c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
+//
+//      parents.map(go).reduce(alg.intersection).asInstanceOf[T[A]]
   }
 
-  def foldTypeRef[T](tpe: Type)(alg: TypeTermAlg[T]): T = {
-    tpe.dealias match {
-      case t if (t <:< NothingType) && (NothingType <:< t) =>
-        alg.nominal("scala.Nothing", Nil)
+  def isConcreteType(tpe: Type): Boolean = tpe.dealias match {
+    case t if (t <:< NothingType) && (NothingType <:< t) => true
+    case t if (t <:< AnyType) && (AnyType <:< t) => true
+    case SingleType(_, v) if !v.isParameter => true
+    case ConstantType(c) => true
+    case t: TypeRef if t.typeSymbol.isClass => t.typeArgs.forall(isConcreteType)
+    case _ => false
+  }
 
-      case t if (t <:< AnyType)     && (AnyType <:< t)     =>
-        alg.nominal("scala.Any", Nil)
+  final class Hidden1
+  final class Hidden2
 
-      case SingleType(_, path) =>
-        findCosingleton(tpe) match {
-          case Some((eq, cosingleton)) =>
-            val parent = foldTypeRef[T](cosingleton)(alg)
-            alg.singleton(parent, q"$path.asInstanceOf[$tpe]", eq)
+  def isConstant[F[_]](F: c.WeakTypeTag[F[_]]): Boolean = {
+    val applied1 = c.universe.appliedType(F.tpe, weakTypeOf[Hidden1])
+    val applied2 = c.universe.appliedType(F.tpe, weakTypeOf[Hidden2])
+    applied1 =:= applied2
+  }
 
-          case None =>
-            c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
-        }
-
-      case ConstantType(value) =>
-        findCosingleton(tpe) match {
-          case Some((eq, cosingleton)) =>
-            val parent = foldTypeRef[T](cosingleton)(alg)
-            alg.singleton(parent, q"$value.asInstanceOf[$tpe]", eq)
-
-          case None =>
-            c.abort(c.enclosingPosition, s"Could not widen a singleton $tpe: no Eq[$tpe] found.")
-        }
-
-//      case RefinedType(parents, decls) =>
-//        // a with b { }
-//        if(decls.nonEmpty)
-//          c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
-//
-//        parents.map(go).reduce(alg.intersection).asInstanceOf[T[A]]
-
-      case t: TypeRef if t.sym.isClass =>
-        val args = t.typeArgs.map(foldTypeRef[T](_)(alg))
-        alg.nominal(t.typeSymbol.fullName, args)
-
-      case x =>
-        c.abort(c.enclosingPosition, s"$tpe (${x.getClass}).")
-    }
+  def isInjective[F[_]](F: c.WeakTypeTag[F[_]]): Boolean = {
+    val applied1 = c.universe.appliedType(F.tpe, weakTypeOf[Hidden1])
+    val applied2 = c.universe.appliedType(F.tpe, weakTypeOf[Hidden2])
+    !(applied1 =:= applied2) && isConcreteType(applied1) && isConcreteType(applied2)
   }
 }
+
+
 
 final class Whitebox(val c: whitebox.Context) extends Shared[whitebox.Context] {
   import c.universe._
@@ -115,138 +153,120 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
 
   val typeableTpe = typeOf[ConcreteType[_]].typeConstructor
 
-  def isConcreteType(tpe: Type): Boolean = {
-    val dealiased = tpe.dealias
-
-    dealiased match {
-      case t if (t <:< NothingType) && (NothingType <:< t) =>
-        true
-
-      case t if (t <:< AnyType) && (AnyType <:< t) =>
-        true
-
-      case SingleType(_, v) if !v.isParameter =>
-        val name = v.name.toString
-        true
-
-      case ConstantType(c) =>
-        val name = c.tpe.typeSymbol.name.toString
-        true
-
-      case t: TypeRef if t.typeSymbol.isClass =>
-        t.typeArgs.forall(isConcreteType)
-
-      case _ =>
-        false
-    }
-  }
-
-  def info[A : c.WeakTypeTag]: c.Tree = {
-    println(foldTypeRef[String](weakTypeTag[A].tpe)(new TypeTermAlg[String] {
-      type T = String
-      def nominal(name: String, args: List[T]): T =
-        name + (if (args.nonEmpty) "[" + args.mkString(", ") + "]" else "")
-      def singleton(tpe: T, value: Tree, eq: Tree): T = tpe + "(" + value + ")"
-    }))
-    c.abort(c.enclosingPosition, "info")
-  }
-
   def makeConcreteType(tpe: Type): c.Tree = {
-    val dealiased = tpe.dealias
-
 //    c.warning(c.enclosingPosition,
 //      dealiased.toString + "\n" +
 //        tpe.toString + "\n" +
 //        tpe.getClass.toString)
 
-    dealiased match {
-      case t if (t <:< NothingType) && (NothingType <:< t) =>
-        // Nothing
-        q"""_root_.leibniz.ConcreteType.CTNothing"""
+//      case RefinedType(parents, decls) =>
+//        // a with b { }
+//        if(decls.nonEmpty)
+//          c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
+//
+//        val parentTypes = parents.filterNot(_ =:= AnyRefType).map { parent =>
+//          c.inferImplicitValue(appliedType(typeableTpe, List(parent)))
+//        }
+//
+//        if (parentTypes.contains(EmptyTree))
+//          c.abort(c.enclosingPosition, "Missing ConcreteType for parent of a refinement")
+//
+//        if (parentTypes.length != 1)
+//          q"""
+//            new _root_.leibniz.ConcreteType.CTIntersection(
+//              _root_.scala.Array[_root_.leibniz.ConcreteType[_]](..$parentTypes)
+//            )
+//           """
+//        else
+//          parentTypes.head
 
-      case t if (t <:< AnyType) && (AnyType <:< t) =>
-        // Any.
-        q"""_root_.leibniz.ConcreteType.CTAny"""
+    val (_, tree) = foldConcreteType[(Type, Tree)](tpe)(new TypeRefAlg[(Type, Tree)] {
+      def nominal(tpe: Type, name: String, args: List[(Type, Tree)]): (Type, Tree) = {
+        val tree = q"""
+          new _root_.leibniz.ConcreteType.CTNominal[$tpe](
+            $name,
+            _root_.scala.List[_root_.leibniz.ConcreteType[_]](..${args.map(_._2)}))
+          """
 
-      case SingleType(prefix, path) if !path.isParameter =>
-        // p # t
-//        println(prefix)
-//        println(path)
+        (tpe, tree)
+      }
+      def singleton(tpe: Type, parent: (Type, Tree), value: Tree, eq: Tree): (Type, Tree) = {
+        val (parentType, parentTree) = parent
 
-        val name = path.name.toString
+        val tree = q"""
+          new _root_.leibniz.ConcreteType.CTSingleton[$parentType, $tpe](
+            $parentTree, $value.asInstanceOf[$tpe], $eq)
+          """
 
-        findCosingleton(tpe) match {
-          case Some((eq, cosingleton)) =>
-            val parent = makeConcreteType(cosingleton)
-            q"""new _root_.leibniz.ConcreteType.CTSingleton[$cosingleton, $tpe]($name, $path.asInstanceOf[$tpe], $eq, $parent)"""
-          case None =>
-            c.abort(c.enclosingPosition, s"Could not make a concrete type for $tpe: no Eq[$tpe] found.")
+        (tpe, tree)
+      }
+    })
+
+    tree
+  }
+
+  def mkConcreteType[A : c.WeakTypeTag]: c.Tree =
+    makeConcreteType(weakTypeOf[A])
+
+  def mkInhabited[A](implicit A: c.WeakTypeTag[A]): c.Tree =
+    weakTypeOf[A].dealias match {
+      case tpe@SingleType(_, path) =>
+        q"""_root_.leibniz.inhabitance.Inhabited.value[$tpe]($path.asInstanceOf[$tpe])"""
+      case tpe@ConstantType(value) =>
+        q"""_root_.leibniz.inhabitance.Inhabited.value[$tpe]($value)"""
+      case tpe@ThisType(_) =>
+        q"""_root_.leibniz.inhabitance.Inhabited.value[$tpe](this)"""
+
+      case tpe =>
+        inhabitants.find { case (t, _) => t <:< tpe } match {
+          case Some((_, tree)) => q"""_root_.leibniz.inhabitance.Inhabited.value[$tpe]($tree)"""
+          case None => c.abort(c.enclosingPosition, s"Can't prove that $tpe is inhabited.")
         }
-
-      case ConstantType(value) =>
-        // 0, "a", etc
-        val name = value.tpe.typeSymbol.name.toString
-
-        findCosingleton(tpe) match {
-          case Some((eq, cosingleton)) =>
-            val parent = makeConcreteType(cosingleton)
-            q"""new _root_.leibniz.ConcreteType.CTSingleton[$cosingleton, $tpe]($name, $value.asInstanceOf[$tpe], $eq, $parent)"""
-          case None =>
-            c.abort(c.enclosingPosition, s"Could not make a concrete type for $tpe: no Eq[$tpe] found.")
-        }
-
-      case RefinedType(parents, decls) =>
-        // a with b { }
-        if(decls.nonEmpty)
-          c.abort(c.enclosingPosition, "Refinements with non-empty scope are not yet supported.")
-
-        val parentTypes = parents.filterNot(_ =:= AnyRefType).map { parent =>
-          c.inferImplicitValue(appliedType(typeableTpe, List(parent)))
-        }
-
-        if (parentTypes.contains(EmptyTree))
-          c.abort(c.enclosingPosition, "Missing ConcreteType for parent of a refinement")
-
-        if (parentTypes.length != 1)
-          q"""
-            new _root_.leibniz.ConcreteType.CTIntersection(
-              _root_.scala.Array[_root_.leibniz.ConcreteType[_]](..$parentTypes)
-            )
-           """
-        else
-          parentTypes.head
-
-      case t: TypeRef if t.typeSymbol.isClass =>
-        // Class[..]
-        val args = t.typeArgs.map(makeConcreteType)
-        q"""
-          new _root_.leibniz.ConcreteType.CTRef[$tpe](${t.sym.fullName},
-            _root_.scala.Array[_root_.leibniz.ConcreteType[_]](..$args))
-        """
-
-      case _ =>
-        c.abort(c.enclosingPosition, s"Could not make a concrete type for $tpe: unrecognized type.")
     }
-  }
 
-  def concreteType[A : c.WeakTypeTag]: c.Tree = {
-    val tpe = weakTypeOf[A]
-    makeConcreteType(tpe)
-  }
+  def mkUninhabited[A](implicit A: c.WeakTypeTag[A]): c.Tree =
+    weakTypeOf[A].dealias match {
+      case tpe if tpe <:< NothingType =>
+        q"""_root_.leibniz.inhabitance.Uninhabited.witness[$tpe](a => a)"""
 
-  def apart[A : c.WeakTypeTag, B : c.WeakTypeTag]: c.Tree = {
+      case tpe@TypeRef(pre, sym, args) =>
+        // println(s"$pre $sym $args ${sym.isFinal} ${sym.isClass} ${sym.isPublic} ${sym.asClass.isSealed}")
+        // println(s"${sym.asClass.toType.members}")
+        c.abort(c.enclosingPosition, s"Can't prove that $tpe is uninhabited (yet).")
+
+      case tpe =>
+        // println(s"$tpe ${tpe.getClass}")
+        c.abort(c.enclosingPosition, s"Can't prove that $tpe is uninhabited.")
+    }
+
+  type Hidden1
+  type Hidden2
+
+  def mkInjective[F[_]](implicit F: c.WeakTypeTag[F[_]]): c.Tree =
+    if (isInjective[F](F))
+      q"_root_.leibniz.variance.Injective.force[${F.tpe}](_root_.leibniz.internal.Unsafe.unsafe)"
+    else
+      c.abort(c.enclosingPosition, s"Can't prove that ${F.tpe} is injective.")
+
+  def mkConstant[F[_]](implicit F: c.WeakTypeTag[F[_]]): c.Tree =
+    if (isConstant[F](F))
+      q"_root_.leibniz.variance.Constant.force[${F.tpe}](_root_.leibniz.internal.Unsafe.unsafe)"
+    else
+      c.abort(c.enclosingPosition, s"Can't prove that ${F.tpe} is injective.")
+
+  def mkApart[A : c.WeakTypeTag, B : c.WeakTypeTag]: c.Tree = {
     val ta = weakTypeOf[A]
     val tb = weakTypeOf[B]
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
       val ca = makeConcreteType(ta)
       val cb = makeConcreteType(tb)
-      q"""_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.internal.Unsafe.unsafe)"""
+      q"_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.internal.Unsafe.unsafe)"
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }
   }
 
-  def weakApart[A : c.WeakTypeTag, B : c.WeakTypeTag]: c.Tree = {
+  def mkWeakApart[A : c.WeakTypeTag, B : c.WeakTypeTag]: c.Tree = {
     val ta = weakTypeOf[A]
     val tb = weakTypeOf[B]
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {

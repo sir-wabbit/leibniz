@@ -4,16 +4,10 @@ import org.scalatest.{FunSuite, Matchers}
 
 
 class EqTest extends FunSuite with Matchers {
-//  Eq[Boolean]
-//  Eq[0]
-//  Eq[Char]
-//  Eq[Option[Either[Char, 0]]]
-  Cosingleton[0]
-  Cosingleton[Int]
-
-  final val x0 = 0
-
-//  MacroTest.run[x0.type]
+  Eq[Boolean]
+  Eq[0]
+  Eq[Char]
+  Eq[Option[Either[Char, 0]]]
 
   test("doubles") {
     val values: Array[Double] = Array(

@@ -101,7 +101,11 @@ sealed abstract class Injective[F[_]] { F =>
   def andThen[G[_]](implicit G: Injective[G]): Injective[λ[x => G[F[x]]]] =
     new Compose[G, F](G, F)
 }
-object Injective {
+trait InjectiveLowerPriority {
+  implicit def mkInjective[F[_]]: Injective[F] =
+    macro internal.MacroUtil.mkInjective[F]
+}
+object Injective extends InjectiveLowerPriority {
   private[leibniz] final class Witness[F[_], X, Y](fxy: (F[X] === F[Y]) => Void) extends Injective[F] {
     override def proof[A, B](ev: F[A] === F[B]): A === B =
       Axioms.tcInjectivity[F, A, B, X, Y](ev, fxy)
@@ -134,7 +138,8 @@ object Injective {
       (s andThen r andThen q).coerce(())
     }
 
-  val id: Injective[λ[X => X]] = witness[λ[X => X], Void, Unit](Void.isNotUnit.contradicts)
+  implicit val id: Injective[λ[X => X]] =
+    witness[λ[X => X], Void, Unit](Void.isNotUnit.contradicts)
 
   final case class Compose[F[_], G[_]](F: Injective[F], G: Injective[G]) extends Injective[λ[x => F[G[x]]]] {
     override def proof[A, B](ev: F[G[A]] === F[G[B]]): A === B =

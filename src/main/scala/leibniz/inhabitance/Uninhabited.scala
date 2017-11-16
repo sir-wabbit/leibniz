@@ -1,15 +1,15 @@
-package leibniz.inhabitance
+package leibniz
+package inhabitance
 
 import leibniz.internal.Unsafe
 import leibniz.{<~<, ===, Void}
 
-sealed abstract class Uninhabited[-A] { notA =>
+sealed abstract class Uninhabited[A] { notA =>
   import Uninhabited._
 
   def contradicts(a: A): Void
 
-  def narrow[B](implicit p: B <~< A): Uninhabited[B] =
-    p.substCt[Uninhabited](this)
+  def narrow[B](implicit p: B <~< A): Uninhabited[B]
 
   def contramap[B](f: B => A): Uninhabited[B] =
     witness[B](b => contradicts(f(b)))
@@ -20,9 +20,16 @@ sealed abstract class Uninhabited[-A] { notA =>
       case Right(b) => notB.contradicts(b)
     }
 }
-object Uninhabited {
-  private[this] final class Witness[A](f: A => Void) extends Uninhabited[A] {
+trait UninhabitedLowerPriority {
+  implicit def mkUninhabited[A]: Uninhabited[A] =
+    macro internal.MacroUtil.mkUninhabited[A]
+}
+object Uninhabited extends UninhabitedLowerPriority {
+  private[this] final class Witness[-A](f: A => Void) extends Uninhabited[A] {
     def contradicts(a: A): Void = f(a)
+
+    def narrow[B](implicit p: B <~< A): Uninhabited[B] =
+      p.substCt[Witness](this)
   }
 
   def apply[A](implicit ev: Uninhabited[A]): Uninhabited[A] = ev
@@ -54,6 +61,9 @@ object Uninhabited {
 
   implicit def uninhabited[A](implicit A: Inhabited[A]): Uninhabited[Uninhabited[A]] =
     Uninhabited.witness(nA => A.contradicts(a => nA.contradicts(a)))
+
+  implicit def func[A, B](implicit A: Inhabited[A], B: Uninhabited[B]): Uninhabited[A => B] =
+    Uninhabited.witness(f => A.contradicts(a => B.contradicts(f(a))))
 
   implicit def proposition[A]: Proposition[Uninhabited[A]] =
     Proposition.force[Uninhabited[A]](Unsafe.unsafe)

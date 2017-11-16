@@ -61,6 +61,11 @@ object Covariant {
   implicit def reify[F[+_]]: Covariant[F] =
     witness[F, Void, Unit](Void.isNotUnit, As.reify[Void, Unit], As.reify[F[Void], F[Unit]])
 
+  implicit def id: Covariant[λ[x => x]] = {
+    type f[+x] = x
+    reify[f]
+  }
+
   def force[F[_]](implicit unsafe: Unsafe): Covariant[F] = {
     type f[+x] = x
     unsafe.coerceK2_2[Covariant, F](reify[f])

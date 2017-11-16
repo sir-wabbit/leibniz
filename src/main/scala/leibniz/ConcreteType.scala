@@ -4,7 +4,7 @@ sealed abstract class ConcreteType[A] extends Product with Serializable
 
 object ConcreteType {
   implicit def apply[A]: ConcreteType[A] =
-    macro internal.MacroUtil.concreteType[A]
+    macro internal.MacroUtil.mkConcreteType[A]
 
   type Type[A] = ConcreteType[A]
 

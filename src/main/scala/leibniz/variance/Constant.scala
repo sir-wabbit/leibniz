@@ -39,7 +39,11 @@ sealed trait Constant[F[_]] { F =>
   def asContravariant: Contravariant[F] = Contravariant.witness[F, Void, Unit](
     Void.isNotUnit, As.reify[Void, Unit], proof[Unit, Void].toAs)
 }
-object Constant {
+trait ConstantLowerPriority {
+  implicit def mkConstant[F[_]]: Constant[F] =
+    macro internal.MacroUtil.mkConstant[F]
+}
+object Constant extends ConstantLowerPriority {
   private[leibniz] final class Witness[F[_], A, B](ab: A =!= B, fab: F[A] === F[B]) extends Constant[F] {
     def subst[G[_], X, Y](g: G[F[X]]): G[F[Y]] =
       Axioms.tcParametricity[F, A, B, X, Y](fab, ab.contradicts).subst[G](g)

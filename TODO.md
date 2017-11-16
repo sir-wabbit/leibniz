@@ -28,5 +28,7 @@ implicit def uninhProductR[A, B](implicit f: !∃[B]): !∃[A * B] = ???
 implicit def inhProduct[A, B](implicit A: ∃[A], B: ∃[B]): ∃[A * B] = ???
 ```
 
+https://github.com/circe/circe/blob/master/modules/generic/shared/src/main/scala/io/circe/generic/util/macros/DerivationMacros.scala
+
 Inhabited[F[Void]]
 Uninhabited[F[Void]]

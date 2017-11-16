@@ -69,8 +69,10 @@ object Apart {
   (val leftType: ConcreteType[A], val rightType: ConcreteType[B], val weaken: A =!= B)
     extends Apart[A, B]
 
+  def apply[A, B](implicit ev: Apart[A, B]): Apart[A, B] = ev
+
   implicit def summon[A, B]: Apart[A, B] =
-    macro internal.MacroUtil.apart[A, B]
+    macro internal.MacroUtil.mkApart[A, B]
 
   def witness[A, B](weakApart: WeakApart[A, B], A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
     new Witness[A, B](A, B, weakApart)
@@ -82,5 +84,5 @@ object Apart {
     ev.contradicts(Is.refl[A])
 
   def force[A, B](A: ConcreteType[A], B: ConcreteType[B])(implicit unsafe: Unsafe): Apart[A, B] =
-    ConcreteType.compare(A, B).left.get
+    witness[A, B](WeakApart.force[A, B], A, B)
 }

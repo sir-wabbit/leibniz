@@ -4,34 +4,36 @@ import leibniz.inhabitance.{Contractible, Inhabited, SingletonOf}
 
 sealed abstract class Nat {
   def cata[F[_]](c: Nat.Cata[F]): F[this.type]
+  def fold[F[_]](k: Nat.Fold[F]): F[this.type]
 }
 object Nat {
   final case object Z extends Nat {
-    def cata[F[_]](c: Nat.Cata[F]): F[this.type] = c.z
+    def cata[F[_]](k: Nat.Cata[F]): F[this.type] = k.z
+    def fold[F[_]](k: Nat.Fold[F]): F[this.type] = k.z
   }
   type Z = Z.type
 
   final case class S[N](n: N)(implicit ev: N <:: Nat) extends Nat {
-    def cata[F[_]](cata: Nat.Cata[F]): F[this.type] = {
-      implicit val thisInhabited: Inhabited[this.type] = Inhabited.value(this)
-      implicit val nInhabited: Inhabited[n.type]       = Inhabited.singleton[n.type]
-      implicit val NInhabited: Inhabited[N]            = Inhabited.value(n)
-
-      val p : this.type === S[N] = contractible[N].contract[this.type]
-      val q : n.type === N = ev.contract[n.type]
-      val r : n.type <~< Nat = q.toAs andThen ev.conforms
-
-      val s : F[N] = q.subst[F](ev.pi_[F](n)(new Pi[Nat, F] {
-        override def apply(x: Nat): F[x.type] = x.cata[F](cata)
-      }))
-
-      p.flip.subst[F](cata.s[N](s))
+    def cata[F[_]](k: Nat.Cata[F]): F[this.type] = {
+      val prev: F[N] = ev.pi[F](n)(new Pi[Nat, F] {
+        def apply(x: Nat): F[x.type] = x.cata[F](k)
+      })
+      Contractible[S[N]].contract[this.type].flip
+        .subst[F](k.s[N](prev))
     }
+    def fold[F[_]](k: Nat.Fold[F]): F[this.type] =
+      Contractible[S[N]].contract[this.type].flip
+        .subst[F](k.s[N](n))
   }
 
   trait Cata[F[_]] {
     def z: F[Z]
     def s[N](n: F[N])(implicit ev: N <:: Nat): F[S[N]]
+  }
+
+  trait Fold[F[_]] {
+    def z: F[Z]
+    def s[N](n: N)(implicit ev: N <:: Nat): F[S[N]]
   }
 
   implicit val natEq: Eq[Nat] = (x: Nat, y: Nat) => x == y

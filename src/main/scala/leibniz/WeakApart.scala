@@ -77,6 +77,8 @@ object WeakApart {
       Constant.witness[F, A, B](this, f)
   }
 
+  def apply[A, B](implicit ev: WeakApart[A, B]): WeakApart[A, B] = ev
+
   implicit def proposition[A, B]: Proposition[WeakApart[A, B]] =
     Proposition.force[WeakApart[A, B]](Unsafe.unsafe)
 
@@ -86,8 +88,8 @@ object WeakApart {
   implicit def uninhabited[A, B](implicit na: Uninhabited[A === B]): Inhabited[A =!= B] =
     Inhabited.value(witness(na.contradicts))
 
-  implicit def apply[A, B]: A =!= B =
-    macro internal.MacroUtil.weakApart[A, B]
+  implicit def mkWeakApart[A, B]: A =!= B =
+    macro internal.MacroUtil.mkWeakApart[A, B]
 
   /**
     * Inequality is an irreflexive relation.

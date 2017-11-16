@@ -12,5 +12,5 @@ package object leibniz {
 
   type <::[A, +B] = SingletonOf[A, B]
 
-  type TypeHolder[T] = Null { type Type = T }
+  type TypeHolder[T] <: (Unit { type Type = T }) with TypeHolder.Tag
 }

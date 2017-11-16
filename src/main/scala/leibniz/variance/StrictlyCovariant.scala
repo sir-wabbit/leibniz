@@ -46,6 +46,8 @@ object StrictlyCovariant {
     def covariant: Covariant[F] = C
   }
 
-  def witness[F[_]](I: Injective[F], C: Covariant[F]): StrictlyCovariant[F] =
+  def apply[F[_]](implicit F: StrictlyCovariant[F]): StrictlyCovariant[F] = F
+
+  implicit def witness[F[_]](implicit I: Injective[F], C: Covariant[F]): StrictlyCovariant[F] =
     new Witness[F](I, C)
 }
