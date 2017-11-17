@@ -6,9 +6,8 @@ trait Sigma[+T, +F[_]] {
 }
 object Sigma {
   def apply[T, F[_]](f: T)(s: F[f.type]): Sigma[T, F] = new Sigma[T, F] {
-    val first: T = f
-    @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
-    val second: F[first.type] = s.asInstanceOf[F[first.type]]
+    val first: f.type = f
+    val second: F[first.type] = s
   }
 
   final def flip[A, B, F[_, _]](f: Sigma[A, λ[a => Sigma[B, λ[b => F[a, b]]]]]): Sigma[B, λ[b => Sigma[A, λ[a => F[a, b]]]]] =
