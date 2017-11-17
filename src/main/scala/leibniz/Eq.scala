@@ -13,6 +13,10 @@ trait Eq[@sp -A] extends Any with Serializable {
     */
   def neqv(x: A, y: A): Boolean = !eqv(x, y)
 
+  /**
+    * Returns either a proof that the singleton values are equal or
+    * a proof that the values are different.
+    */
   def compare(x: A, y: A): Either[x.type =!= y.type, x.type === y.type] = {
     import leibniz.internal.Unsafe._
     if (eqv(x, y)) Right(Is.force[x.type, y.type])
