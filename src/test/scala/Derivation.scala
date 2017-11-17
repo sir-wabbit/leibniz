@@ -2,21 +2,72 @@ package leibniz
 
 import leibniz.inhabitance.{Inhabited, Proposition, SingletonOf, Uninhabited}
 import leibniz.internal.illTyped
-import leibniz.variance.{Constant, Covariant, Injective, StrictlyCovariant}
+import leibniz.variance._
 import org.scalatest.{FunSuite, Matchers}
 
 class Derivation extends FunSuite with Matchers {
   test("proposition") {
     implicitly[Proposition[Proposition[0]]]
     implicitly[Proposition[0 === 1]]
+    implicitly[Proposition[Inhabited[0]]]
+    implicitly[Proposition[Inhabited[Void]]]
   }
 
   test("singleton of") {
+    SingletonOf[0, 0]
     SingletonOf[0, Int]
+    SingletonOf[0, AnyVal]
+    SingletonOf[0, Any]
+    SingletonOf[None.type, None.type]
+    SingletonOf[None.type, Option[Int]]
+    SingletonOf[None.type, Option[String]]
   }
 
   test("equality") {
     implicitly[Void === Nothing]
+
+    object Test {
+      type AnyLike >: Any
+      implicitly[AnyLike === Any]
+    }
+
+    val i: 0 = 0
+    val j: i.type = i
+    implicitly[0 === i.type]
+    implicitly[j.type === i.type]
+
+    implicitly[Int === Int]
+    implicitly[Nothing === Nothing]
+    implicitly[Any === Any]
+    implicitly[0 === 0]
+    implicitly["" === ""]
+
+    illTyped("implicitly[1 === 0]")
+    illTyped("implicitly[Null === Void]")
+    illTyped("implicitly[Any === Void]")
+    illTyped("implicitly[AnyRef === Any]")
+
+    type g[x] = Unit
+    type h[x] = g[g[x]]
+    type f[x] = List[h[x]]
+    implicitly[f[Int] === List[Unit]]
+  }
+
+  test("hk equality") {
+    type Id[x] = x
+    implicitly[List =~= List]
+    implicitly[Id =~= Id]
+    implicitly[Either[Int, ?] =~= Either[Int, ?]]
+    implicitly[(Int => ?) =~= (Int => ?)]
+
+    // implicitly[(? => Int) =~= (? => Int)]
+  }
+
+  test("f-bounded equality") {
+    //  trait Nat[X <: Nat[X]]
+    //  final case class Z() extends Nat[Z]
+    //  final case class S[N](n: N) extends Nat[S[N]]
+    //  implicitly[IsF[Nat, Z, Z]]
   }
 
   test("inequality") {
@@ -40,7 +91,102 @@ class Derivation extends FunSuite with Matchers {
 
     implicitly[None.type =!= 0]
 
+    illTyped("implicitly[0 =!= 0]")
+    illTyped("implicitly['a =!= 'a]")
+    illTyped("implicitly[(Int with String) =!= (String with Int)]")
+    illTyped("implicitly[Int =!= Int]")
+
+    type g[x] = Unit
+    type h[x] = g[g[x]]
+    type f[x] = List[h[x]]
+    illTyped("implicitly[List[Unit] =!= f[Int]]")
     // implicitly[Int =!= Int with Long]
+  }
+
+  test("liskov simple") {
+    implicitly[Int <~< Int]
+    implicitly[Int <~< AnyVal]
+
+    implicitly[String <~< String]
+    implicitly[String <~< AnyRef]
+    implicitly[String <~< Any]
+
+    implicitly[Nothing <~< Int]
+    implicitly[Nothing <~< String]
+    implicitly[Nothing <~< AnyRef]
+    implicitly[Nothing <~< AnyVal]
+    implicitly[Nothing <~< Any]
+
+    implicitly[Null <~< String]
+    implicitly[Null <~< AnyRef]
+    implicitly[Null <~< Any]
+
+    implicitly[(String, Int) <~< (String, Any)]
+    implicitly[(String, Int) <~< (Any, Any)]
+    implicitly[(String, Int) <~< (AnyRef, AnyVal)]
+    implicitly[(String, Int) <~< AnyRef]
+    implicitly[(String, Int) <~< Any]
+    implicitly[Null <~< (String, Int)]
+    implicitly[Nothing <~< (String, Int)]
+
+    implicitly[Int As1 AnyVal]
+  }
+
+  test("complex === and <~<") {
+    trait A { type X }
+    def f1(a: A): a.X === a.X = implicitly[Is[a.X, a.X]]
+    def f2(a: A): a.X <~< a.X = implicitly[As[a.X, a.X]]
+    def f3(a: A): As1[a.X, a.X] = implicitly[As1[a.X, a.X]]
+
+    trait F[L, H >: L] { type A >: L <: (H with B); type B >: L <: H }
+    def g1[L, H >: L](a: F[L, H]): Is[a.A, a.A] = implicitly[Is[a.A, a.A]]
+    def g2[L, H >: L](a: F[L, H]): As[a.A, a.B] = implicitly[As[a.A, a.B]]
+    def g3[L, H >: L](a: F[L, H]): As[a.A, a.B] = implicitly[As[a.A, a.B]]
+
+    def h1[A, B >: A]: As[A, B] = implicitly[As[A, B]]
+    def h2[A]: Is[A, A] = implicitly[Is[A, A]]
+    def h3[A]: As[A, A] = implicitly[As[A, A]]
+  }
+
+  test("bounded") {
+    implicitly[Bounded[Nothing, AnyVal, Int]]
+    implicitly[Bounded[Int, AnyVal, Int]]
+    implicitly[Bounded[Nothing, Int, Int]]
+    implicitly[Bounded[Int, Int, Int]]
+  }
+
+  test("liskov") {
+    implicitly[Liskov[Nothing, Any, Int, AnyVal]]
+    implicitly[Liskov[Int, Any, Int, AnyVal]]
+    implicitly[Liskov[Int, AnyVal, Int, AnyVal]]
+  }
+
+  test("liskov1") {
+    implicitly[Liskov1[Nothing, Any, Int, AnyVal]]
+    implicitly[Liskov1[Int, Any, Int, AnyVal]]
+    implicitly[Liskov1[Int, AnyVal, Int, AnyVal]]
+  }
+
+  test("liskov2") {
+    implicitly[Liskov2[Nothing, Any, Int, AnyVal]]
+    implicitly[Liskov2[Int, Any, Int, AnyVal]]
+    implicitly[Liskov2[Int, AnyVal, Int, AnyVal]]
+  }
+
+  test("leibniz") {
+    implicitly[Leibniz[Nothing, Any, Int, Int]]
+    implicitly[Leibniz[Int, Any, Int, Int]]
+    implicitly[Leibniz[Int, AnyVal, Int, Int]]
+    implicitly[Leibniz[Nothing, Any, AnyVal, AnyVal]]
+    implicitly[Leibniz[Int, Any, AnyVal, AnyVal]]
+    implicitly[Leibniz[Int, AnyVal, AnyVal, AnyVal]]
+    implicitly[Leibniz[Nothing, Nothing, Nothing, Nothing]]
+  }
+
+  test("iso") {
+    implicitly[Int Iso Int]
+    implicitly[Nothing Iso Nothing]
+    implicitly[Any Iso Any]
   }
 
   test("strong inequality") {
@@ -104,6 +250,8 @@ class Derivation extends FunSuite with Matchers {
   test("uninhabitance") {
     Uninhabited[Void]
     Uninhabited[Int => Void]
+    Uninhabited[Int => String => Void]
+    // Uninhabited[(Int => String) => Void]
 
     illTyped("Uninhabited[Unit]")
   }
@@ -161,12 +309,22 @@ class Derivation extends FunSuite with Matchers {
   test("covariance") {
     Covariant[Option]
     Covariant[List]
-    Covariant[λ[`+x` => x]]
+    // Covariant[λ[`+x` => x]]
   }
 
   test("strict covariance") {
     StrictlyCovariant[Option]
     StrictlyCovariant[List]
     // StrictlyCovariant[λ[`+x` => x]]
+  }
+
+  test("contravariance") {
+    type f[-x] = x => Boolean
+    Contravariant[f]
+  }
+
+  test("strict contravariance") {
+    type f[-x] = x => Boolean
+    // StrictlyContravariant[f]
   }
 }
