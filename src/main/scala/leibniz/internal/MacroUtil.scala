@@ -239,9 +239,6 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
         c.abort(c.enclosingPosition, s"Can't prove that $tpe is uninhabited.")
     }
 
-  type Hidden1
-  type Hidden2
-
   def mkInjective[F[_]](implicit F: c.WeakTypeTag[F[_]]): c.Tree =
     if (isInjective[F](F))
       q"_root_.leibniz.variance.Injective.force[${F.tpe}](_root_.leibniz.internal.Unsafe.unsafe)"
