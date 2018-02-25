@@ -120,7 +120,7 @@ sealed abstract class Leibniz[-L, +H >: L, A >: L <: H, B >: L <: H] private[Lei
 
 object Leibniz {
   implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Leibniz[L, H, A, B]] =
-    Proposition.force[Leibniz[L, H, A, B]](Unsafe.unsafe)
+    (p: ¬¬[Leibniz[L, H, A, B]]) => Axioms.leibnizConsistency[L, H, A, B](p.run)
 
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Leibniz[L, H, A, B]): Leibniz[L, H, A, B] = ab
@@ -279,11 +279,4 @@ object Leibniz {
     type f[x >: L <: H] = Leibniz[L, H, A, x]
     Axioms.bounded[L, H, A, B, f](eq, refl[A])
   }
-
-  /**
-    * Unsafe coercion between types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Leibniz[L, H, A, B] =
-    unsafe.coerceK0[Leibniz[L, H, A, B]](refl[Any])
 }

@@ -151,7 +151,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
   import c.universe._
   import internal._
 
-  val typeableTpe = typeOf[ConcreteType[_]].typeConstructor
+  val typeIdTpe = typeOf[TypeId[_]].typeConstructor
 
   def makeConcreteType(tpe: Type): c.Tree = {
 //    c.warning(c.enclosingPosition,
@@ -183,9 +183,9 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     val (_, tree) = foldConcreteType[(Type, Tree)](tpe)(new TypeRefAlg[(Type, Tree)] {
       def nominal(tpe: Type, name: String, args: List[(Type, Tree)]): (Type, Tree) = {
         val tree = q"""
-          new _root_.leibniz.ConcreteType.CTNominal[$tpe](
+          _root_.leibniz.TypeId.$$nominal[$tpe](
             $name,
-            _root_.scala.List[_root_.leibniz.ConcreteType[_]](..${args.map(_._2)}))
+            _root_.scala.Array[_root_.leibniz.TypeId[_]](..${args.map(_._2)}))
           """
 
         (tpe, tree)
@@ -194,7 +194,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
         val (parentType, parentTree) = parent
 
         val tree = q"""
-          new _root_.leibniz.ConcreteType.CTSingleton[$parentType, $tpe](
+          _root_.leibniz.TypeId.$$singleton[$parentType, $tpe](
             $parentTree, $value.asInstanceOf[$tpe], $eq)
           """
 
@@ -205,7 +205,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     tree
   }
 
-  def mkConcreteType[A : c.WeakTypeTag]: c.Tree =
+  def mkTypeId[A : c.WeakTypeTag]: c.Tree =
     makeConcreteType(weakTypeOf[A])
 
   def mkInhabited[A](implicit A: c.WeakTypeTag[A]): c.Tree =
@@ -257,7 +257,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
       val ca = makeConcreteType(ta)
       val cb = makeConcreteType(tb)
-      q"_root_.leibniz.Apart.force[$ta, $tb]($ca, $cb)(_root_.leibniz.internal.Unsafe.unsafe)"
+      q"_root_.leibniz.internal.Unsafe.apart[$ta, $tb]($ca, $cb)"
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }
@@ -269,7 +269,7 @@ final class MacroUtil(val c: blackbox.Context) extends Shared[blackbox.Context] 
     if (isConcreteType(ta) && isConcreteType(tb) && !(ta <:< tb && tb <:< ta)) {
       // val ca = makeConcreteType(ta)
       // val cb = makeConcreteType(tb)
-      q"""_root_.leibniz.WeakApart.force[$ta, $tb](_root_.leibniz.internal.Unsafe.unsafe)"""
+      q"""_root_.leibniz.internal.Unsafe.weakApart[$ta, $tb]"""
     } else {
       c.abort(c.enclosingPosition, s"Could not prove that $ta =!= $tb.")
     }

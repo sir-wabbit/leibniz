@@ -78,7 +78,7 @@ object Liskov2 {
   }
 
   implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Liskov2[L, H, A, B]] =
-    Proposition.force[Liskov2[L, H, A, B]](Unsafe.unsafe)
+    Liskov.proposition[L, H, A, B].isomap(Iso.unsafe(_.strengthenTwice, _.weakenTwice))
 
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
@@ -147,11 +147,4 @@ object Liskov2 {
     */
   def fromAs[L, H >: L, A >: L <: H, B >: L <: H](eq: A <~< B): Liskov2[L, H, A, B] =
     Liskov.fromAs[L, H, A, B](eq).strengthenTwice[L, H, A, B]
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe.
-    */
-  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Liskov2[L, H, A, B] =
-    unsafe.coerceK0[Liskov2[L, H, A, B]](refl[Any])
 }

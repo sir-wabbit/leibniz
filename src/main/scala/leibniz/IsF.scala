@@ -115,7 +115,7 @@ sealed abstract class IsF[F[X <: F[X]], A <: F[A], B <: F[B]] private[IsF]()  { 
 
 object IsF {
   implicit def proposition[F[X <: F[X]], A <: F[A], B <: F[B]]: Proposition[IsF[F, A, B]] =
-    Proposition.force[IsF[F, A, B]](Unsafe.unsafe)
+    (p: ¬¬[IsF[F, A, B]]) => Axioms.isFConsistency[F, A, B](p.run)
 
   def apply[F[X <: F[X]], A <: F[A], B <: F[B]](implicit ev: IsF[F, A, B]): IsF[F, A, B] = ev
 
@@ -159,12 +159,4 @@ object IsF {
     */
   def fromPredef[F[X <: F[X]], A <: F[A], B <: F[B]](eq: A =:= B): IsF[F, A, B] =
     fromIs[F, A, B](Is.fromPredef(eq))
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[F[X <: F[X]], A <: F[A], B <: F[B]](implicit unsafe: Unsafe): IsF[F, A, B] =
-    unsafe.coerceK0[IsF[F, A, B]](refl[F, A])
 }

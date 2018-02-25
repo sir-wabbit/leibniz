@@ -1,75 +1,98 @@
 package leibniz
 package inhabitance
 
-import leibniz.internal.Unsafe
-import leibniz.{<~<, Void}
+import cats.Functor
+import leibniz.macros.newtype
 
 /**
   * Witnesses that [[A]] is inhabited.
   */
-sealed abstract class Inhabited[A] { a =>
+@newtype final case class Inhabited[A](run: (A => Void) => Void) { A =>
   import Inhabited._
 
-  def contradicts(f: A => Void): Void
+  def contradicts(f: A => Void): Void = run(f)
+//
+//  /**
+//    * If [[A]] is inhabited, then any supertype [[B]] of `A`
+//    * is also inhabited.
+//    */
+//  def widen[B](implicit p: A <~< B): ¬¬[B] =
+//    p.substCoF[Inhabited](this)
 
-  def widen[B](implicit p: A <~< B): Inhabited[B]
+  def notUninhabited(f: Uninhabited[A]): Void =
+    contradicts(f.contradicts)
 
-  def map[B](f: A => B): Inhabited[B] =
-    witness[B](k => a.contradicts(a => k(f(a))))
+  /**
+    * If [[A]] is inhabited, and there is a total function
+    * from [[A]] to [[B]], then `B` is also inhabited.
+    */
+  def map[B](f: A => B): ¬¬[B] =
+    witness[B](k => A.contradicts(a => k(f(a))))
 
-  def flatMap[B](f: A => Inhabited[B]) =
-    witness[B](k => a.contradicts(a => f(a).contradicts(k)))
+  /**
+    * If [[A]] is inhabited, and you can prove that [[B]] is
+    * inhabited given a value of `A`, then `B` is also inhabited.
+    */
+  def flatMap[B](f: A => ¬¬[B]) =
+    witness[B](k => A.contradicts(a => f(a).contradicts(k)))
 
-  def zip[B](b: Inhabited[B]): Inhabited[(A, B)] =
+  /**
+    * If [[A]] and [[B]] are inhabited, then a tuple `(A, B)` is
+    * also inhabited.
+    */
+  def zip[B](b: ¬¬[B]): ¬¬[(A, B)] =
     flatMap(a => b.flatMap(b => Inhabited.value((a, b))))
+
+  def proved(implicit ev: Proposition[A]): A =
+    ev.proved(A)
 }
 trait InhabitedLowerPriority {
-  implicit def mkInhabited[A]: Inhabited[A] =
+  implicit def mkInhabited[A]: ¬¬[A] =
     macro internal.MacroUtil.mkInhabited[A]
 }
 object Inhabited extends InhabitedLowerPriority {
-  private[this] final class Witness[+A](a: (A => Void) => Void) extends Inhabited[A] {
-    def contradicts(f: A => Void): Void = a(f)
+  def apply[A](implicit A: ¬¬[A]): ¬¬[A] = A
 
-    def widen[B](implicit p: A <~< B): Inhabited[B] =
-      p.substCo[Witness](this)
-  }
+//  implicit val covariant: cats.Functor[Inhabited] = new Functor[Inhabited] {
+//    override def map[A, B](fa: Inhabited[A])(f: A => B): Inhabited[B] = fa.map(f)
+//  }
 
-  def apply[A](implicit A: Inhabited[A]): Inhabited[A] = A
+  def witness[A](a: (A => Void) => Void): ¬¬[A] =
+    Inhabited(a)
 
-  def witness[A](a: (A => Void) => Void): Inhabited[A] =
-    new Witness[A](a)
-
-  def value[A](a: A): Inhabited[A] =
+  def value[A](a: A): ¬¬[A] =
     witness[A](f => f(a))
 
-  def map2[A, B, C](f: (A, B) => C)(implicit A: Inhabited[A], B: Inhabited[B]): Inhabited[C] =
+  def map2[A, B, C](f: (A, B) => C)(implicit A: ¬¬[A], B: ¬¬[B]): ¬¬[C] =
     for { a <- A; b <- B } yield f(a, b)
 
-  implicit def singleton[A <: Singleton](implicit A: ValueOf[A]): Inhabited[A] =
+  implicit def singleton[A <: Singleton](implicit A: ValueOf[A]): ¬¬[A] =
     witness(f => f(A.value))
 
-  implicit def inhabited[A](implicit A: Inhabited[A]): Inhabited[Inhabited[A]] =
+  implicit def inhabited[A](implicit A: ¬¬[A]): ¬¬[¬¬[A]] =
     witness(f => f(A))
 
-  implicit def uninhabited[A](implicit na: Uninhabited[A]): Uninhabited[Inhabited[A]] =
-    Uninhabited.witness(A => A.contradicts(a => na.contradicts(a)))
+  implicit def uninhabited[A](implicit na: Uninhabited[A]): Uninhabited[¬¬[A]] =
+    Uninhabited.witness(A => A.notUninhabited(na))
 
-  implicit def proposition[A]: Proposition[Inhabited[A]] =
-    Proposition.force[Inhabited[A]](Unsafe.unsafe)
+  implicit def proposition[A]: Proposition[¬¬[A]] =
+    (p: ¬¬[¬¬[A]]) => p.flatMap(identity)
 
-  implicit def contractible[A](implicit A: Inhabited[A]): Contractible[Inhabited[A]] =
-    Contractible.witness[Inhabited[A]](inhabited, proposition[A])
+  implicit def contractible[A](implicit A: ¬¬[A]): Contractible[Inhabited[A]] =
+    Contractible.witness[¬¬[A]](inhabited, proposition[A])
 
-  def lem[A]: Inhabited[Either[A => Void, A]] =
+  /**
+    * Law of excluded middle.
+    */
+  def lem[A]: ¬¬[Either[A => Void, A]] =
     witness(k => k(Left(a => k(Right(a)))))
 
-  def and[A, B](f: (A, B) => Void): Inhabited[Either[A => Void, B => Void]] =
+  def and[A, B](f: (A, B) => Void): ¬¬[Either[A => Void, B => Void]] =
     witness(p => p(Right(b => p(Left(a => f(a, b))))))
 
-  def imp[A, B](f: A => B): Inhabited[Either[A => Void, B]] =
+  def imp[A, B](f: A => B): ¬¬[Either[A => Void, B]] =
     witness(k => k(Left(a => k(Right(f(a))))))
 
-  def pierce[A]: Inhabited[((A => Void) => A) => A] =
+  def pierce[A]: ¬¬[((A => Void) => A) => A] =
     witness(k => k((p: (A => Void) => A) => p((a: A) => k(_ => a))))
 }

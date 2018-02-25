@@ -8,8 +8,8 @@ sealed abstract class Bounded[-L, +U >: L, A] private [Bounded] () {
   def proof: A === Type
 }
 object Bounded {
-  implicit def proposition[L, U >: L, A]: Proposition[Bounded[L, U, A]] =
-    Proposition.force[Bounded[L, U, A]](Unsafe.unsafe)
+//  implicit def proposition[L, U >: L, A]: Proposition[Bounded[L, U, A]] =
+//    Proposition.force[Bounded[L, U, A]](Unsafe.unsafe)
 
   def apply[L, U >: L, A](implicit ev: Bounded[L, U, A]): Bounded[L, U, A] = ev
 

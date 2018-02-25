@@ -32,10 +32,10 @@ sealed abstract class As1[A, B] { ab =>
   }
 
   def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As1 F[B] =
-    F.lift(ab.loosen).fix
+    F(ab.loosen).fix
 
   def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As1 F[A] =
-    F.lift(ab.loosen).fix
+    F(ab.loosen).fix
 
   def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
     liftCoF[F].coerce(fa)
@@ -52,14 +52,11 @@ object As1 {
   }
 
   implicit def proposition[A, B]: Proposition[As1[A, B]] =
-    Proposition.force[As1[A, B]](Unsafe.unsafe)
+    Proposition[As[A, B]].isomap(Iso.unsafe(a => a.fix, a => a.loosen))
 
   def apply[A, B](implicit ev: A As1 B): A As1 B = ev
 
   def refl[A]: A As1 A = new Refl[A]()
-
-  def force[A, B](implicit unsafe: Unsafe): A As1 B =
-    As.force[A, B].fix[A, B]
 
   implicit def fix[A, B](implicit ab: A <~< B): A As1 B = ab.fix[A, B]
 
@@ -69,6 +66,4 @@ object As1 {
     def lower: A Is Lower = a
     def upper: B Is Upper = b
   }
-
-
 }

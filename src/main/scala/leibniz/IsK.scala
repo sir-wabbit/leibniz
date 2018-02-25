@@ -121,7 +121,7 @@ object IsK {
   }
 
   implicit def proposition[A[_], B[_]]: Proposition[IsK[A, B]] =
-    Proposition.force[IsK[A, B]](Unsafe.unsafe)
+    (p: ¬¬[IsK[A, B]]) => Axioms.isKConsistency[A, B](p.run)
 
   def apply[A[_], B[_]](implicit ab: A =~= B): A =~= B = ab
 
@@ -216,12 +216,4 @@ object IsK {
     type f3[j[_]] = F[A, I, M, ?] =~= F[B, J, j, ?]
     mn.subst[f3](ij.subst[f2](ab.subst[f1](refl[F[A, I, M, ?]])))
   }
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[A[_], B[_]](implicit unsafe: Unsafe): A =~= B =
-    unsafe.coerceK4_8[=~=, A, B].apply[Any, Any](refl[Any])
 }

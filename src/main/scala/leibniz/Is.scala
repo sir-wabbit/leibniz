@@ -1,6 +1,6 @@
 package leibniz
 
-import leibniz.inhabitance.Proposition
+import leibniz.inhabitance.{Inhabited, Proposition}
 import leibniz.internal.Unsafe
 
 /**
@@ -156,9 +156,6 @@ sealed abstract class Is[A, B] private[Is]()  { ab =>
 }
 
 object Is {
-  implicit def proposition[A, B]: Proposition[Is[A, B]] =
-    Proposition.force[Is[A, B]](Unsafe.unsafe)
-
   def apply[A, B](implicit ev: A Is B): A Is B = ev
 
   final case class Refl[A]() extends Is[A, A] {
@@ -219,11 +216,14 @@ object Is {
     */
   def fromPredef[A, B](eq: A =:= B): A === B = Axioms.predefEq(eq)
 
-  /**
-    * Unsafe coercion between types. `force` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe, but needed where Leibnizian
-    * equality isn't sufficient.
-    */
-  def force[A, B](implicit unsafe: Unsafe): A === B =
-    unsafe.coerceK2_1[===, A, B](refl[A])
+  implicit def proposition[A, B]: Proposition[Is[A, B]] =
+    (p: ¬¬[Is[A, B]]) => Axioms.isConsistency[A, B](p.run)
+
+  def lem[A, B]: ¬¬[Either[A =!= B, A === B]] = Inhabited.lem[A === B].map {
+    case Right(eqv) => Right(eqv)
+    case Left(neqv) => Left(WeakApart(neqv))
+  }
+
+  def consistent[A, B](f: (A =!= B) => Void): A === B =
+    proposition[A, B].proved(Inhabited.witness(a => f(WeakApart(a))))
 }

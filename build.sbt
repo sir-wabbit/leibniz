@@ -1,4 +1,4 @@
-addCompilerPlugin("org.scalamacros" %% "paradise" % "2.1.0" cross CrossVersion.full)
+addCompilerPlugin("org.scalamacros" % "paradise_2.12.4" % "2.1.0")
 
 autoCompilerPlugins := true
 
@@ -16,29 +16,54 @@ lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   organization      := "com.alexknvl",
   version           := "0.12.0-SNAPSHOT",
-  scalaVersion      := "2.12.1",
+  scalaVersion      := "2.12.4-bin-typelevel-4",
   scalaOrganization := "org.typelevel",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
   scalacOptions ++= List(
-    "-deprecation", "-unchecked", "-feature",
+    "-deprecation",
     "-encoding", "UTF-8",
+    "-explaintypes",
+    "-Yrangepos",
+    "-feature",
+    "-Xfuture",
+    "-Yliteral-types",
+    "-Ypartial-unification",
     "-language:existentials",
     "-language:higherKinds",
     "-language:implicitConversions",
     "-language:experimental.macros",
-    "-Yliteral-types",
-    "-Ypartial-unification",
-    "-Yno-adapted-args", "-Ywarn-dead-code",
-    "-Ywarn-numeric-widen", "-Xfuture"),
+    "-unchecked",
+    "-Yno-adapted-args",
+    "-opt-warnings",
+    "-Xlint:_,-type-parameter-shadow",
+    "-Xsource:2.13",
+    "-Ywarn-dead-code",
+    "-Ywarn-extra-implicit",
+    "-Ywarn-inaccessible",
+    "-Ywarn-infer-any",
+    "-Ywarn-nullary-override",
+    "-Ywarn-nullary-unit",
+    "-Ywarn-numeric-widen",
+    "-Ywarn-unused:_,-imports",
+    "-Ywarn-value-discard",
+    "-opt:l:inline",
+    "-opt-inline-from:<source>"),
   resolvers ++= List(
     Resolver.sonatypeRepo("snapshots"),
     Resolver.sonatypeRepo("releases")),
-  libraryDependencies ++= testLibraries,
-  wartremoverErrors ++= List(Wart.AsInstanceOf)
+  libraryDependencies ++= testLibraries
+//  wartremoverErrors ++= List(Wart.AsInstanceOf)
 )
 
 val macroCompatVersion = "1.1.1"
 val macroParadiseVersion = "2.1.0"
+
+lazy val leibnizMacros = (project in file("./macros/"))
+  .settings(name := "leibniz-macros")
+  .settings(commonSettings: _*)
+  .settings(libraryDependencies ++= Seq(
+    scalaOrganization.value % "scala-compiler" % scalaVersion.value,
+    "org.typelevel" %% "macro-compat" % macroCompatVersion))
 
 lazy val root = (project in file("."))
   .settings(name := "leibniz")
@@ -47,4 +72,4 @@ lazy val root = (project in file("."))
   .settings(libraryDependencies ++= Seq(
     scalaOrganization.value % "scala-compiler" % scalaVersion.value,
     "org.typelevel" %% "macro-compat" % macroCompatVersion))
-  .settings(libraryDependencies += "com.lihaoyi" %% "acyclic" % "0.1.7" % "provided")
+  .dependsOn(leibnizMacros)

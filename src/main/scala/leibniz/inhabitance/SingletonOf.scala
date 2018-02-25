@@ -61,8 +61,8 @@ sealed abstract class SingletonOf[A, +B] { ab =>
     */
   def equal[X <: A, Y <: A](x: X, y: Y): X === Y =
     isProposition.equal[X, Y](
-      As.refl[X], As.refl[Y],
-      Inhabited.value(x), Inhabited.value(y))
+      InhabitedSubset[X, A](As.refl[X], Inhabited.value(x)),
+      InhabitedSubset[Y, A](As.refl[Y], Inhabited.value(y)))
 
   /**
     * All inhabited subtypes of a singleton are equal.
@@ -73,7 +73,7 @@ sealed abstract class SingletonOf[A, +B] { ab =>
   def piSigma[F[_]](a: A)(f: Pi[B, F]): Sigma[A, F] = {
     val s = Sigma[A, λ[x => x === a.type]](a)(Is.refl[a.type])
     type f[+x] = Sigma[x, λ[x => x === a.type]]
-    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCo[f](s)
+    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCv[f](s)
 
     val p : b.first.type === a.type = b.second
     Sigma.apply[A, F](a)(b.second.subst[F](f(b.first)))
@@ -82,7 +82,7 @@ sealed abstract class SingletonOf[A, +B] { ab =>
   def pi[F[_]](a: A)(f: Pi[B, F]): F[A] = {
     val s = Sigma[A, λ[x => x === A]](a)(contract_(a))
     type f[+x] = Sigma[x, λ[x => x === A]]
-    val b: Sigma[B, λ[x => x === A]] = conforms.substCo[f](s)
+    val b: Sigma[B, λ[x => x === A]] = conforms.substCv[f](s)
 
     b.second.subst[F](f(b.first))
   }
@@ -90,7 +90,7 @@ sealed abstract class SingletonOf[A, +B] { ab =>
   def pi_[F[_]](a: A)(f: Pi[B, F]): F[a.type] = {
     val s = Sigma[A, λ[x => x === a.type]](a)(Is.refl[a.type])
     type f[+x] = Sigma[x, λ[x => x === a.type]]
-    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCo[f](s)
+    val b: Sigma[B, λ[x => x === a.type]] = conforms.substCv[f](s)
 
     b.second.subst[F](f(b.first))
   }

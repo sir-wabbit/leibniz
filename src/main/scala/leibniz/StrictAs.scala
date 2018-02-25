@@ -1,5 +1,6 @@
 package leibniz
 
+import leibniz.inhabitance.Proposition
 import leibniz.internal.Unsafe
 
 sealed abstract class StrictAs[-A, +B] { ab =>
@@ -9,8 +10,8 @@ sealed abstract class StrictAs[-A, +B] { ab =>
 
   def conformity: A <~< B
 
-  def contradicts(ba: StrictAs[B, A]): Void =
-    inequality[A, B].contradicts(Axioms.bracket(ab.conformity, ba.conformity)(Unsafe.unsafe))
+  def contradicts(ba: B <~< A): Void =
+    inequality[A, B].apply(Axioms.bracket(ab.conformity, ba))
 
   /**
     * Substitution into a covariant context.
@@ -18,7 +19,7 @@ sealed abstract class StrictAs[-A, +B] { ab =>
     * @see [[substCt]]
     */
   def substCo[F[+_]](fa: F[A]): F[B] =
-    conformity.substCo[F](fa)
+    conformity.substCv[F](fa)
 
   /**
     * Substitution into a contravariant context.
@@ -37,16 +38,16 @@ sealed abstract class StrictAs[-A, +B] { ab =>
   final def apply(a: A): B =
     coerce(a)
 
-  def andThen[A1 <: A, C](bc: StrictAs[B, C]): StrictAs[A1, C] =
-    bc.conformity.substCo[StrictAs[A1, +?]](ab)
+  def andThen[A1 <: A, C](bc: B </< C): A1 </< C =
+    bc.conformity.substCv[StrictAs[A1, +?]](ab)
 
-  def compose[Z, B1 >: B](za: StrictAs[Z, A]): StrictAs[Z, B1] =
+  def compose[Z, B1 >: B](za: Z </< A): Z </< B1 =
     za andThen ab
 
-  def andThenNS[A1 <: A, C](bc: As[B, C]): StrictAs[A1, C] =
-    bc.substCo[StrictAs[A1, +?]](ab)
+  def andThenNS[A1 <: A, C](bc: B <~< C): A1 </< C =
+    bc.substCv[StrictAs[A1, +?]](ab)
 
-  def composeNS[Z, B1 >: B](za: As[Z, A]): StrictAs[Z, B1] =
+  def composeNS[Z, B1 >: B](za: Z <~< A): Z </< B1 =
     za.substCt[StrictAs[-?, B1]](ab)
 
   /**
@@ -83,14 +84,33 @@ sealed abstract class StrictAs[-A, +B] { ab =>
   }
 }
 object StrictAs {
+  def apply[A, B](implicit ev: A </< B): A </< B = ev
+
   private[this] final class Witness[A, B](val nab: A =!= B, val conformity: A <~< B) extends StrictAs[A, B] {
     def inequality[A1 <: A, B1 >: B]: A1 =!= B1 =
       WeakApart.witness { a1b1 =>
         val nc: B1 <~< A1 = a1b1.flip.toAs
-        nab.contradicts(Axioms.bracket(conformity, nc : As[B, A])(Unsafe.unsafe))
+        nab(Axioms.bracket(conformity, nc : As[B, A]))
       }
   }
 
-  def witness[A, B](implicit nab: A =!= B, conformity: A <~< B): StrictAs[A, B] =
+  implicit def witness[A, B](implicit nab: A =!= B, conformity: A <~< B): StrictAs[A, B] =
     new Witness[A, B](nab, conformity)
+
+  def witnessNot[A, B](implicit ev: ¬¬[¬[A <~< B] Either (A === B)]): ¬[A </< B] =
+    (sab: A </< B) => ev.run {
+      case Right(ab) => sab.inequality[A, B](ab)
+      case Left(nab) => nab(sab.conformity)
+    }
+
+  def bottomTop: Void </< Any = witness(Void.isNotAny, As.bottomTop)
+
+  def irreflexive[A](ev: A </< A): Void =
+    ev.inequality[A, A](Is.refl)
+
+  implicit def strictAsIsProposition[A, B]: Proposition[StrictAs[A, B]] =
+    (Proposition[A =!= B] zip Proposition[A <~< B]).isomap(Iso.unsafe(
+      p => witness(p._1, p._2),
+      p => (p.inequality[A, B], p.conformity)
+    ))
 }

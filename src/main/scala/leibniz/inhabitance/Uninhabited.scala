@@ -1,15 +1,16 @@
 package leibniz
 package inhabitance
 
-import leibniz.internal.Unsafe
-import leibniz.{<~<, ===, Void}
+import leibniz.macros.newtype
+import leibniz.variance.Contravariant
 
-sealed abstract class Uninhabited[A] { notA =>
+@newtype final case class Uninhabited[A](run: A => Void) { notA =>
   import Uninhabited._
 
-  def contradicts(a: A): Void
+  def contradicts(a: A): Void = run(a)
 
-  def narrow[B](implicit p: B <~< A): Uninhabited[B]
+  def notInhabited(a: Inhabited[A]): Void =
+    a.contradicts(contradicts)
 
   def contramap[B](f: B => A): Uninhabited[B] =
     witness[B](b => contradicts(f(b)))
@@ -20,22 +21,16 @@ sealed abstract class Uninhabited[A] { notA =>
       case Right(b) => notB.contradicts(b)
     }
 }
+
 trait UninhabitedLowerPriority {
   implicit def mkUninhabited[A]: Uninhabited[A] =
     macro internal.MacroUtil.mkUninhabited[A]
 }
+
 object Uninhabited extends UninhabitedLowerPriority {
-  private[this] final class Witness[-A](f: A => Void) extends Uninhabited[A] {
-    def contradicts(a: A): Void = f(a)
-
-    def narrow[B](implicit p: B <~< A): Uninhabited[B] =
-      p.substCt[Witness](this)
-  }
-
   def apply[A](implicit ev: Uninhabited[A]): Uninhabited[A] = ev
 
-  def witness[A](f: A => Void): Uninhabited[A] =
-    new Witness[A](f)
+  def witness[A](f: A => Void): Uninhabited[A] = Uninhabited(f)
 
   def contramap2[A, B, C](p: Inhabited[Either[Uninhabited[A], Uninhabited[B]]])(f: C => (A, B)): Uninhabited[C] =
     witness { c =>
@@ -60,11 +55,11 @@ object Uninhabited extends UninhabitedLowerPriority {
     Inhabited.witness(f => f(A))
 
   implicit def uninhabited[A](implicit A: Inhabited[A]): Uninhabited[Uninhabited[A]] =
-    Uninhabited.witness(nA => A.contradicts(a => nA.contradicts(a)))
+    Uninhabited.witness(nA => A.notUninhabited(nA))
 
   implicit def func[A, B](implicit A: Inhabited[A], B: Uninhabited[B]): Uninhabited[A => B] =
-    Uninhabited.witness(f => A.contradicts(a => B.contradicts(f(a))))
+    Uninhabited.witness(f => A.notUninhabited(B.contramap(f)))
 
   implicit def proposition[A]: Proposition[Uninhabited[A]] =
-    Proposition.force[Uninhabited[A]](Unsafe.unsafe)
+    (nnA: ¬¬[Uninhabited[A]]) => new Uninhabited[A](a => nnA.contradicts(A => A.contradicts(a)))
 }

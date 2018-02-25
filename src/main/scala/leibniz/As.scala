@@ -1,6 +1,6 @@
 package leibniz
 
-import leibniz.inhabitance.Proposition
+import leibniz.inhabitance.{Inhabited, Proposition}
 import leibniz.internal.Unsafe
 import leibniz.variance.{Contravariant, Covariant}
 
@@ -23,13 +23,13 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     *
     * @see [[substCt]]
     */
-  def substCo[F[+_]](fa: F[A]): F[B] =
+  def substCv[F[+_]](fa: F[A]): F[B] =
     fix[A, B].substCo[F](fa)
 
   /**
     * Substitution into a contravariant context.
     *
-    * @see [[substCo]]
+    * @see [[substCv]]
     */
   def substCt[F[-_]](fb: F[B]): F[A] =
     fix[A, B].substCt[F](fb)
@@ -49,7 +49,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   final def andThen[C](bc: B <~< C): A <~< C = {
     type f[+x] = A <~< x
-    bc.substCo[f](this)
+    bc.substCv[f](this)
   }
 
   /**
@@ -69,7 +69,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   final def coerce(a: A): B = {
     type f[+x] = x
-    substCo[f](a)
+    substCv[f](a)
   }
 
   /**
@@ -80,7 +80,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   final def liftCo[F[+_]]: F[A] <~< F[B] = {
     type f[+x] = F[A] <~< F[x]
-    substCo[f](refl[F[A]])
+    substCv[f](refl[F[A]])
   }
 
   /**
@@ -91,7 +91,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   final def liftCt[F[-_]]: F[B] <~< F[A] = {
     type f[+x] = F[x] <~< F[A]
-    substCo[f](refl)
+    substCv[f](refl)
   }
 
   /**
@@ -99,7 +99,7 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   def onF[X](fa: X => A): X => B = {
     type f[+a] = X => a
-    substCo[f](fa)
+    substCv[f](fa)
   }
 
   /**
@@ -108,8 +108,17 @@ sealed abstract class As[-A, +B] private[As]() { ab =>
     */
   final def toPredef: A <:< B = {
     type f[+a] = A <:< a
-    substCo[f](implicitly[A <:< A])
+    substCv[f](implicitly[A <:< A])
   }
+
+  /**
+    * a ≤ b ⟷ a < b ⋁  a ~ b
+    */
+  def decompose[AA <: A, BB >: B]: ¬¬[(AA </< BB) Either (AA === BB)] =
+    Inhabited.lem[AA === BB].map {
+      case Left(notEqual) => Left(StrictAs.witness[AA, BB](WeakApart(notEqual), ab))
+      case Right(equal) => Right(equal)
+    }
 }
 
 object As {
@@ -121,7 +130,7 @@ object As {
   }
 
   implicit def proposition[A, B]: Proposition[As[A, B]] =
-    Proposition.force[As[A, B]](Unsafe.unsafe)
+    (p: ¬¬[As[A, B]]) => Axioms.asConsistency[A, B](p.run)
 
   /**
     * Subtyping relation is reflexive.
@@ -134,11 +143,9 @@ object As {
   implicit def reify[A, B >: A]: A <~< B = Refl[A]()
 
   /**
-    * Subtyping is antisymmetric in theory (and in Dotty). Notice that this is
-    * not true in Scala until [[https://issues.scala-lang.org/browse/SI-7278
-    * SI-7278]] is fixed.
+    * Subtyping is antisymmetric.
     */
-  def bracket[A, B](f: A <~< B, g: B <~< A)(implicit unsafe: Unsafe): A === B =
+  def bracket[A, B](f: A <~< B, g: B <~< A): A === B =
     Axioms.bracket[A, B](f, g)
 
   def pair[A1, B1, A2, B2] (eq1: A1 <~< B1, eq2: A2 <~< B2): Pair[A1, B1, A2, B2] =
@@ -148,13 +155,13 @@ object As {
     def liftCo[F[+_, +_]]: F[A1, A2] <~< F[B1, B2] = {
       type f1[+a1] = F[A1, A2] <~< F[a1, A2]
       type f2[+a2] = F[A1, A2] <~< F[B1, a2]
-      eq2.substCo[f2](eq1.substCo[f1](refl[F[A1, A2]]))
+      eq2.substCv[f2](eq1.substCv[f1](refl[F[A1, A2]]))
     }
 
     def liftCt[F[-_, -_]]: F[B1, B2] <~< F[A1, A2] = {
       type f1[+a1] = F[a1, A2] <~< F[A1, A2]
       type f2[+a2] = F[B1, a2] <~< F[A1, A2]
-      eq2.substCo[f2](eq1.substCo[f1](refl[F[A1, A2]]))
+      eq2.substCv[f2](eq1.substCv[f1](refl[F[A1, A2]]))
     }
 
     def substCo[F[+_, +_]](value: F[A1, A2]): F[B1, B2] =
@@ -165,11 +172,9 @@ object As {
   }
 
   implicit final class leibnizAsSyntax[A, B](val ab: As[A, B]) extends AnyVal {
-    def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As F[B] =
-      F.lift(ab)
+    def liftCoF[F[_]](implicit F: Covariant[F]): F[A] As F[B] = F(ab)
 
-    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] =
-      F.lift(ab)
+    def liftCtF[F[_]](implicit F: Contravariant[F]): F[B] As F[A] = F(ab)
 
     def substCoF[F[_]](fa: F[A])(implicit F: Covariant[F]): F[B] =
       F.coerce(fa)(ab)
@@ -184,10 +189,5 @@ object As {
   def fromPredef[A, B](ev: A <:< B): A <~< B =
     Axioms.predefConformity[A, B](ev)
 
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe.
-    */
-  def force[A, B](implicit unsafe: Unsafe): A <~< B =
-    unsafe.coerceK2_1[<~<, A, B](refl[Any])
+  val bottomTop: Void <~< Any = reify[Void, Any]
 }

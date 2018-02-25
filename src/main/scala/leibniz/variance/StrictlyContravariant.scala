@@ -1,11 +1,25 @@
 package leibniz
 package variance
 
-sealed abstract class StrictlyContravariant[F[_]] {
+import leibniz.inhabitance.{Inhabited, Proposition}
+
+sealed abstract class StrictlyContravariant[F[_]] { F =>
   import StrictlyContravariant._
 
-  def injective: Injective[F]
-  def contravariant: Contravariant[F]
+  def apply[A, B](implicit ab: A </< B): F[B] </< F[A]
+
+  val injective: Injective[F] = new Injective[F] {
+    override def apply[X, Y](implicit ev: F[X] === F[Y]): X === Y =
+      Parametric[F].lowerInj[Void, Any, X, Y](F[Void, Any](StrictAs.bottomTop).inequality[F[Any], F[Void]].flip, ev)
+  }
+
+  val contravariant: Contravariant[F] = new Contravariant[F] {
+    override def apply[A, B](implicit ab: A <~< B): F[B] <~< F[A] =
+      Inhabited.lem[A === B].map {
+        case Right(ab) => ab.lift[F].flip.toAs
+        case Left(nab) => F(StrictAs.witness(WeakApart(nab), ab)).conformity
+      }.proved
+  }
 
   def substCo[G[+_], A, B](g: G[F[B]])(implicit ev: A <~< B): G[F[A]] =
     contravariant.substCo[G, A, B](g)
@@ -14,12 +28,12 @@ sealed abstract class StrictlyContravariant[F[_]] {
     contravariant.substCt[G, A, B](g)
 
   def lift[A, B](ab: A <~< B): F[B] <~< F[A] =
-    contravariant.lift(ab)
+    contravariant(ab)
 
   def liftStrict[A, B](ab: StrictAs[A, B]): StrictAs[F[B], F[A]] =
     StrictAs.witness[F[B], F[A]](
       injective.contrapositive(ab.inequality.flip),
-      contravariant.lift(ab.conformity))
+      contravariant(ab.conformity))
 
   def composeCo[G[_]](G: StrictlyCovariant[G]): StrictlyContravariant[λ[x => F[G[x]]]] =
     witness[λ[x => F[G[x]]]](
@@ -41,13 +55,17 @@ sealed abstract class StrictlyContravariant[F[_]] {
     contravariant.composePh[G](G)
 }
 object StrictlyContravariant {
-  final class Witness[F[_]](I: Injective[F], C: Contravariant[F]) extends StrictlyContravariant[F] {
-    def injective: Injective[F] = I
-    def contravariant: Contravariant[F] = C
-  }
-
   def apply[F[_]](implicit F: StrictlyContravariant[F]): StrictlyContravariant[F] = F
 
-  implicit def witness[F[_]](implicit I: Injective[F], C: Contravariant[F]): StrictlyContravariant[F] =
-    new Witness[F](I, C)
+  implicit def witness[F[_]](implicit I: Injective[F], C: Contravariant[F]): StrictlyContravariant[F] = new StrictlyContravariant[F] {
+    override def apply[A, B](implicit ab: A </< B): F[B] </< F[A] =
+      StrictAs.witness[F[B], F[A]](
+        WeakApart(fab => ab.inequality(I(fab).flip)),
+        C[A, B](ab.conformity))
+  }
+
+  implicit def proposition[F[_]]: Proposition[StrictlyContravariant[F]] =
+    (A: ¬¬[StrictlyContravariant[F]]) => new StrictlyContravariant[F] {
+      override def apply[A, B](implicit ab: A </< B): F[B] </< F[A] = A.map(_[A, B]).proved
+    }
 }

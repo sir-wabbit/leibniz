@@ -1,9 +1,6 @@
 package leibniz
 
-
-import scala.{ specialized => sp }
-
-trait Iso[A, @sp B] { ab =>
+trait Iso[A, B] { ab =>
   def to(a: A): B
   def from(b: B): A
 
@@ -45,12 +42,12 @@ trait Iso[A, @sp B] { ab =>
   }
 
   def and[I, J](ij: Iso[I, J]): Iso[(A, I), (B, J)] =
-    Iso.total(
+    Iso.unsafe(
       { case (a, i) => (ab.to(a), ij.to(i)) },
       { case (b, j) => (ab.from(b), ij.from(j)) })
 
   def or[I, J](ij: Iso[I, J]): Iso[Either[A, I], Either[B, J]] =
-    Iso.total({
+    Iso.unsafe({
       case Left(a) => Left(ab.to(a))
       case Right(i) => Right(ij.to(i))
     }, {
@@ -61,15 +58,16 @@ trait Iso[A, @sp B] { ab =>
 object Iso {
   def apply[A, B](implicit ab: Iso[A, B]): Iso[A, B] = ab
 
-  def total[A, B](ab: A => B, ba: B => A): Iso[A, B] = new Iso[A, B] {
+  def unsafe[A, B](ab: A => B, ba: B => A): Iso[A, B] = new Iso[A, B] {
     def to(a: A): B = ab(a)
     def from(b: B): A = ba(b)
   }
 
-  def singleton[A, B](implicit A: ValueOf[A], B: ValueOf[B]): Iso[A, B] = new Iso[A, B] {
-    def to(a: A): B = B.value
-    def from(b: B): A = A.value
-  }
+  def singleton[A <: Singleton, B <: Singleton](implicit A: ValueOf[A], B: ValueOf[B]): Iso[A, B] =
+    new Iso[A, B] {
+      def to(a: A): B = B.value
+      def from(b: B): A = A.value
+    }
 
   final case class Refl[A]() extends Iso[A, A] {
     def to(a: A): A = a
@@ -84,15 +82,15 @@ object Iso {
     type ⨂ [A, B] = (A, B)
     type Id = Unit
 
-    final def associate[A, B, C]: Iso[A ⨂ (B ⨂ C), (A ⨂ B) ⨂ C] = total(
+    final def associate[A, B, C]: Iso[A ⨂ (B ⨂ C), (A ⨂ B) ⨂ C] = unsafe(
       { case (a, (b, c)) => ((a, b), c) },
       { case ((a, b), c) => (a, (b, c)) })
 
-    final def commute[A, B]: Iso[A ⨂ B, B ⨂ A] = total(
+    final def commute[A, B]: Iso[A ⨂ B, B ⨂ A] = unsafe(
       { case (a, b) => (b, a) },
       { case (b, a) => (a, b) })
 
-    final def unit[A]: Iso[A, A ⨂ Id] = total(
+    final def unit[A]: Iso[A, A ⨂ Id] = unsafe(
       { case a => (a, ()) },
       { case (a, ()) => a })
 
@@ -108,7 +106,7 @@ object Iso {
     type Id = Void
 
     final def associate[A, B, C]: Iso[A ⨂ (B ⨂ C), (A ⨂ B) ⨂ C] =
-      total({
+      unsafe({
         case Left(a) => Left(Left(a))
         case Right(Left(b)) => Left(Right(b))
         case Right(Right(c)) => Right(c)
@@ -119,7 +117,7 @@ object Iso {
       })
 
     final def commute[A, B]: Iso[A ⨂ B, B ⨂ A] =
-      total({
+      unsafe({
         case Left(a) => Right(a)
         case Right(b) => Left(b)
       },
@@ -128,7 +126,7 @@ object Iso {
         case Left(b) => Right(b)
       })
 
-    final def unit[A]: Iso[A, A ⨂ Id] = total(
+    final def unit[A]: Iso[A, A ⨂ Id] = unsafe(
       { case a => Left(a) },
       {
         case Left(a) => a

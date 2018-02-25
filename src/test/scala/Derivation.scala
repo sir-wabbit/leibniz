@@ -208,24 +208,54 @@ class Derivation extends FunSuite with Matchers {
     Apart[Int, Long]
     Apart[Int, 0]
 
-    Apart[None.type, 0]
+    // Apart[None.type, 0]
 
     // implicitly[Int =!= Int with Long]
   }
 
   test("concrete types") {
-    ConcreteType[0]
-    ConcreteType[Nothing]
-    ConcreteType[Void]
-    ConcreteType[Int]
-    ConcreteType[String]
-    ConcreteType[List[Option[Int]]]
-    ConcreteType["abc"]
-    ConcreteType[List["abc"]]
-    ConcreteType[List[Array[Seq[Option[1]]]]]
+    TypeId[0]
+    TypeId[Nothing]
+    TypeId[Void]
+    TypeId[Int]
+    TypeId[String]
+    TypeId[List[Option[Int]]]
+    TypeId["abc"]
+    TypeId[List["abc"]]
+    TypeId[List[Array[Seq[Option[1]]]]]
 
-    Eq[None.type]
-    ConcreteType[None.type]
+    // Eq[None.type]
+    // TypeId[None.type]
+
+    // ConcreteType[Int with Any]
+    // ConcreteType[(AnyRef { type Self = this.type }) with (Int { type Y })]
+    // ConcreteType[i.type forSome { val i: X; type X }]
+  }
+
+  test("type id comparisons") {
+    val types: Array[TypeId[_]] = Array(
+      TypeId[0],
+      TypeId[0L],
+      TypeId[1],
+      TypeId[Nothing],
+      TypeId[Int],
+      TypeId[String],
+      TypeId[List[Option[Int]]],
+      TypeId["abc"],
+      TypeId["cde"],
+      TypeId[List["abc"]],
+      TypeId[List[Array[Seq[Option[1]]]]]
+    )
+
+    for (i <- types.indices; j <- types.indices) {
+//      println(s"$i $j ${types(i)} ${types(j)}")
+      if (i == j) (types(i) compare types(j)).isRight should be (true)
+      else (types(i) compare types(j)).isRight should be (false)
+    }
+
+
+    // Eq[None.type]
+    // TypeId[None.type]
 
     // ConcreteType[Int with Any]
     // ConcreteType[(AnyRef { type Self = this.type }) with (Int { type Y })]
@@ -326,5 +356,93 @@ class Derivation extends FunSuite with Matchers {
   test("strict contravariance") {
     type f[-x] = x => Boolean
     // StrictlyContravariant[f]
+  }
+
+  test("implies") {
+    Implies[Inhabited[Int], Inhabited[Inhabited[Int]]]
+    implicitly[Inhabited[Int] |- Uninhabited[Uninhabited[Int]]]
+
+    implicitly[Unit |- Inhabited[Any]]
+
+    illTyped("implicitly[Unit |- Inhabited[Void]]")
+
+    {
+      trait Monoid[M] {
+        def empty: M
+        def combine(a: M, b: M): M
+      }
+      trait CMonoid[M] extends Monoid[M]
+
+      trait Foldable[F, T[_]] {
+        type Type
+        def foldMap[B](ft: F)(f: Type => B)(implicit B: T[B]): B
+      }
+
+      implicit def foldable[F, T1[_], T2[x] <: T1[x]]
+      (implicit T1: Foldable[F, T1]): Foldable[F, T2] { type Type = T1.Type } =
+        new Foldable[F, T2] {
+          type Type = T1.Type
+          def foldMap[B](ft: F)(f: Type => B)(implicit B: T2[B]): B = T1.foldMap[B](ft)(f)(B: T1[B])
+        }
+
+      implicit def listFoldable[A]: Foldable[List[A], Monoid] =
+        new Foldable[List[A], Monoid] {
+          type Type = A
+          def foldMap[B](ft: List[A])(f: A => B)(implicit B: Monoid[B]): B =
+            ft.map(f).foldLeft(B.empty)(B.combine)
+        }
+
+      implicitly[Foldable[List[Int], CMonoid]]
+    }
+  }
+
+  test("forall") {
+    type f[x] = Inhabited[Int]
+    Forall[f]
+
+    Forall[λ[x => Inhabited[Int]]]
+
+    trait Foo[A]
+    implicit def foo[A]: Foo[A] = new Foo[A] { }
+
+    Forall[Foo]
+    Forall[λ[x => Foo[(x, x)]]]
+
+    type g[x] = Inhabited[x] |- Inhabited[Inhabited[x]]
+    Forall[g]
+
+//    Forall[({type L[x] = Inhabited[x] |- Inhabited[Inhabited[x]]})#L]
+
+//    {
+//      trait Monoid[M] {
+//        def empty: M
+//        def combine(a: M, b: M): M
+//      }
+//      trait CMonoid[M] extends Monoid[M]
+//
+//      trait Foldable[F, T[_]] {
+//        type Type
+//        def foldMap[B](ft: F)(f: Type => B)(implicit B: T[B]): B
+//      }
+//
+//      type ImpliesK[T1[_], T2[_], A] = T1[A] |- T2[A]
+//      type Test[T1[_], T2[_]] = Forall[ImpliesK[T2, T1, ?]]
+//
+//      implicit def foldable[F, T1[_], T2[_]]
+//      (implicit T1: Foldable[F, T1], ev: Test[T1, T2]): Foldable[F, T2] { type Type = T1.Type } =
+//        new Foldable[F, T2] {
+//          type Type = T1.Type
+//          def foldMap[B](ft: F)(f: Type => B)(implicit B: T2[B]): B = T1.foldMap[B](ft)(f)(ev.apply[B](B))
+//        }
+//
+//      implicit def listFoldable[A]: Foldable[List[A], Monoid] =
+//        new Foldable[List[A], Monoid] {
+//          type Type = A
+//          def foldMap[B](ft: List[A])(f: A => B)(implicit B: Monoid[B]): B =
+//            ft.map(f).foldLeft(B.empty)(B.combine)
+//        }
+//
+//      implicitly[Foldable[List[Int], CMonoid]]
+//    }
   }
 }

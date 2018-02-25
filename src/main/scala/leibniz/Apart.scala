@@ -19,24 +19,26 @@ import leibniz.variance.Constant
   */
 sealed abstract class Apart[A, B] { nab =>
   def weaken: WeakApart[A, B]
-  def leftType: ConcreteType[A]
-  def rightType: ConcreteType[B]
+
+  def leftType: TypeId[A]
+
+  def rightType: TypeId[B]
 
   /**
     * If `F[A]` equals to `F[B]` for unequal types `A` and `B`,
     * then `F` must be a constant type constructor.
     */
   def proof[F[_]](f: F[A] === F[B]): Constant[F] =
-    weaken.proof[F](f)
+    weaken.constant[F](f)
 
   /**
     * Inequality is a co-transitive relation: if two elements
     * are apart, then any other element is apart from at least
     * one of them.
     */
-  def compare[C](C: ConcreteType[C]): Either[Apart[A, C], Apart[B, C]] =
-    ConcreteType.compare(leftType, C) match {
-      case Right(_) => ConcreteType.compare(rightType, C) match {
+  def compare[C](C: TypeId[C]): Either[Apart[A, C], Apart[B, C]] =
+    TypeId.compare(leftType, C) match {
+      case Right(_) => TypeId.compare(rightType, C) match {
         case Right(_) => ???
         case Left(p) => Right(p)
       }
@@ -49,8 +51,8 @@ sealed abstract class Apart[A, B] { nab =>
     */
   def flip: Apart[B, A] = new Apart[B, A] {
     def weaken: WeakApart[B, A] = nab.weaken.flip
-    def leftType: ConcreteType[B] = nab.rightType
-    def rightType: ConcreteType[A] = nab.leftType
+    def leftType: TypeId[B] = nab.rightType
+    def rightType: TypeId[A] = nab.leftType
     override def flip: Apart[A, B] = nab
   }
 
@@ -59,14 +61,14 @@ sealed abstract class Apart[A, B] { nab =>
     */
   def contradicts[R](ab: A === B): R = {
     type f[x] = x
-    nab.proof[f](ab).proof[Unit, R].subst[f](())
+    nab.proof[f](ab)[Unit, R].subst[f](())
   }
 
   override def toString: String = s"$leftType =!= $rightType"
 }
 object Apart {
   private[this] final class Witness[A, B]
-  (val leftType: ConcreteType[A], val rightType: ConcreteType[B], val weaken: A =!= B)
+  (val leftType: TypeId[A], val rightType: TypeId[B], val weaken: A =!= B)
     extends Apart[A, B]
 
   def apply[A, B](implicit ev: Apart[A, B]): Apart[A, B] = ev
@@ -74,7 +76,7 @@ object Apart {
   implicit def summon[A, B]: Apart[A, B] =
     macro internal.MacroUtil.mkApart[A, B]
 
-  def witness[A, B](weakApart: WeakApart[A, B], A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+  def witness[A, B](weakApart: WeakApart[A, B], A: TypeId[A], B: TypeId[B]): Apart[A, B] =
     new Witness[A, B](A, B, weakApart)
 
   /**
@@ -82,7 +84,4 @@ object Apart {
     */
   def irreflexive[A](ev: Apart[A, A]): Void =
     ev.contradicts(Is.refl[A])
-
-  def force[A, B](A: ConcreteType[A], B: ConcreteType[B])(implicit unsafe: Unsafe): Apart[A, B] =
-    witness[A, B](WeakApart.force[A, B], A, B)
 }

@@ -1,73 +1,59 @@
 package leibniz
 package variance
 
-import leibniz.inhabitance.Proposition
-import leibniz.internal.Unsafe
+import leibniz.inhabitance.{Inhabited, Proposition}
 
 trait Covariant[F[_]] { F =>
   import Covariant._
 
-  def substCo[G[+_], A, B](g: G[F[A]])(implicit ev: A <~< B): G[F[B]]
+  def apply[A, B](implicit ab: A <~< B): F[A] <~< F[B]
 
-  def substCt[G[-_], A, B](g: G[F[B]])(implicit ev: A <~< B): G[F[A]] = {
-    type f[+a] = G[a] => G[F[A]]
-    substCo[f, A, B](identity[G[F[A]]]).apply(g)
-  }
+  def substCo[G[+_], A, B](g: G[F[A]])(implicit ev: A <~< B): G[F[B]] =
+    F(ev).substCv[G](g)
 
-  def coerce[A, B](value: F[A])(implicit ev: A <~< B): F[B] = {
-    type f[+x] = x
-    substCo[f, A, B](value)
-  }
+  def substCt[G[-_], A, B](g: G[F[B]])(implicit ev: A <~< B): G[F[A]] =
+    F(ev).substCt[G](g)
 
-  def lift[A, B](ab: A <~< B): F[A] <~< F[B] = {
-    type f[+x] = F[A] <~< x
-    substCo[f, A, B](As.refl[F[A]])(ab)
-  }
+  def coerce[A, B](value: F[A])(implicit ev: A <~< B): F[B] =
+    F(ev).coerce(value)
 
   def widen[A, B](fa: F[A])(implicit ev: A <~< B): F[B] =
-    lift(ev).apply(fa)
+    F(ev).apply(fa)
 
-  def composeCo[G[_]](G: Covariant[G]): Covariant[λ[x => F[G[x]]]] = {
-    val p: Void <~< Unit = As.reify[Void, Unit]
-    val q: F[G[Void]] <~< F[G[Unit]] = F.lift(G.lift(p))
-    witness[λ[x => F[G[x]]], Void, Unit](Void.isNotUnit, p, q)
-  }
+  def composeCo[G[_]](G: Covariant[G]): Covariant[λ[x => F[G[x]]]] =
+    Covariant.witness[λ[x => F[G[x]]]](F(G(As.bottomTop)))
 
-  def composeCt[G[_]](G: Contravariant[G]): Contravariant[λ[x => F[G[x]]]] = {
-    val p = As.reify[Void, Unit]
-    val q: F[G[Unit]] <~< F[G[Void]] = F.lift(G.lift(p))
-    Contravariant.witness[λ[x => F[G[x]]], Void, Unit](Void.isNotUnit, p, q)
-  }
+  def composeCt[G[_]](G: Contravariant[G]): Contravariant[λ[x => F[G[x]]]] =
+    Contravariant.witness[λ[x => F[G[x]]]](F(G(As.bottomTop)))
 
   def composePh[G[_]](G: Constant[G]): Constant[λ[x => F[G[x]]]] =
     G.andThenCo[F](F)
 }
 object Covariant {
-  final class Witness[F[_], A, B](ab: (A === B) => Void, p: A <~< B, q: F[A] <~< F[B]) extends Covariant[F] {
-    def substCo[G[+_], X, Y](g: G[F[X]])(implicit ev: X <~< Y): G[F[Y]] = {
-      val fxy = Axioms.cotcParametricity[F, A, B, X, Y](ab, p, q, ev)
-      fxy.substCo[G](g)
-    }
-  }
-
-  def witness[F[_], A, B](implicit ab: A =!= B, p: A <~< B, q: F[A] <~< F[B]): Covariant[F] =
-    new Witness[F, A, B](ab.contradicts, p, q)
-
-  implicit def proposition[F[_]]: Proposition[Covariant[F]] =
-    Proposition.force[Covariant[F]](Unsafe.unsafe)
-
   def apply[F[_]](implicit ev: Covariant[F]): Covariant[F] = ev
 
+  def witness[F[_]](implicit fab: F[Void] <~< F[Any]): Covariant[F] =
+    witness1[F, Void, Any](StrictAs.bottomTop, fab)
+
+  def witness1[F[_], A, B](implicit ab: A </< B, fab: F[A] <~< F[B]): Covariant[F] =
+    new Covariant[F] {
+      override def apply[X, Y](implicit xy: X <~< Y): F[X] <~< F[Y] =
+        Is.lem[X, Y].map {
+          case Right(eqv) => eqv.lift[F].toAs
+          case Left(neqv) => Parametric[F].liftCv[A, B, X, Y](ab, fab, StrictAs.witness(neqv, xy))
+        }.proved
+    }
+
   implicit def reify[F[+_]]: Covariant[F] =
-    witness[F, Void, Unit](Void.isNotUnit, As.reify[Void, Unit], As.reify[F[Void], F[Unit]])
+    witness[F](As.reify[F[Void], F[Any]])
 
   implicit def id: Covariant[λ[x => x]] = {
     type f[+x] = x
     reify[f]
   }
 
-  def force[F[_]](implicit unsafe: Unsafe): Covariant[F] = {
-    type f[+x] = x
-    unsafe.coerceK2_2[Covariant, F](reify[f])
-  }
+  implicit def proposition[F[_]]: Proposition[Covariant[F]] =
+    (A: ¬¬[Covariant[F]]) => new Covariant[F] {
+      override def apply[A, B](implicit ev: A <~< B): F[A] <~< F[B] = A.map(_[A, B]).proved
+    }
 }

@@ -92,7 +92,7 @@ sealed abstract class Liskov[-L, +H >: L, -A >: L <: H, +B >: L <: H] private[Li
 
 object Liskov {
   implicit def proposition[L, H >: L, A >: L <: H, B >: L <: H]: Proposition[Liskov[L, H, A, B]] =
-    Proposition.force[Liskov[L, H, A, B]](Unsafe.unsafe)
+    (p: ¬¬[Liskov[L, H, A, B]]) => Axioms.liskovConsistency[L, H, A, B](p.run)
 
   def apply[L, H >: L, A >: L <: H, B >: L <: H]
   (implicit ab: Liskov[L, H, A, B]): Liskov[L, H, A, B] = ab
@@ -169,11 +169,4 @@ object Liskov {
     */
   def fromAs[L, H >: L, A >: L <: H, B >: L <: H](eq: A <~< B): Liskov[L, H, A, B] =
     Liskov1.fromAs[L, H, A, B](eq).weaken
-
-  /**
-    * Unsafe coercion between types. `unsafeForce` abuses `asInstanceOf` to
-    * explicitly coerce types. It is unsafe.
-    */
-  def force[L, H >: L, A >: L <: H, B >: L <: H](implicit unsafe: Unsafe): Liskov[L, H, A, B] =
-    unsafe.coerceK0[Liskov[L, H, A, B]](refl[Any])
 }

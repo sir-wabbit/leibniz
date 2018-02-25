@@ -1,7 +1,7 @@
 package leibniz
 
 import leibniz.inhabitance.{Inhabited, Proposition, Uninhabited}
-import leibniz.internal.Unsafe
+import leibniz.macros.newtype
 import leibniz.variance.{Constant, Injective}
 
 /**
@@ -18,22 +18,22 @@ import leibniz.variance.{Constant, Injective}
   * @see [[https://en.wikipedia.org/wiki/Apartness_relation
   *        Apartness relation]]
   */
-sealed abstract class WeakApart[A, B] { nab =>
+@newtype final case class WeakApart[A, B](run: (A === B) => Void) { self =>
   import WeakApart._
+
+  /**
+    * Having `A === B` and `A =!= B` at the same time leads to a contradiction.
+    */
+  def apply(ab: A === B): Void = run(ab)
 
   /**
     * If `F[A]` equals to `F[B]` for unequal types `A` and `B`,
     * then `F` must be a constant type constructor.
     */
-  def proof[F[_]](f: F[A] === F[B]): Constant[F]
+  def constant[F[_]](f: F[A] === F[B]): Constant[F] =
+    Constant.witness1[F, A, B](this, f)
 
-  /**
-    * Having `A === B` and `A =!= B` at the same time leads to a contradiction.
-    */
-  def contradicts(ab: A === B): Void = {
-    val id: Constant[λ[x => x]] = proof[λ[x => x]](ab)
-    id.proof[Unit, Void].coerce(())
-  }
+  def lower[F[_]]: PartialLower[F, A, B] = new PartialLower[F, A, B](this)
 
   /**
     * Inequality is a co-transitive relation: if two elements
@@ -41,7 +41,7 @@ sealed abstract class WeakApart[A, B] { nab =>
     * one of them.
     */
   def compare[C]: Inhabited[Either[A =!= C, B =!= C]] = {
-    val f: (A === C, B === C) => Void = (ac, bc) => nab.contradicts(ac andThen bc.flip)
+    val f: (A === C, B === C) => Void = (ac, bc) => run.apply(ac andThen bc.flip)
     Inhabited.and(f).map {
       case Left(nac) => Left(witness(nac))
       case Right(nbc) => Right(witness(nbc))
@@ -52,38 +52,42 @@ sealed abstract class WeakApart[A, B] { nab =>
     * Inequality is symmetric relation and therefore can be flipped around.
     * Flipping is its own inverse, so `x.flip.flip == x`.
     */
-  def flip: B =!= A = new (B =!= A) {
-    def proof[F[_]](f: F[B] === F[A]): Constant[F] =
-      nab.proof[F](f.flip)
-
-    override def flip: A =!= B = nab
-  }
+  def flip: B =!= A = WeakApart.witness[B, A](ba => self(ba.flip))
 
   /**
     * Strengthen the proof by providing explicit type descriptions.
     */
-  def strengthen(implicit A: ConcreteType[A], B: ConcreteType[B]): Apart[A, B] =
+  def strengthen(implicit A: TypeId[A], B: TypeId[B]): Apart[A, B] =
     Apart.witness(this, A, B)
 
   /**
     * Given an injective [[F]], if `A ≠ B`, then `F[A] ≠ F[B]`.
     */
   def lift[F[_]](implicit F: Injective[F]): F[A] =!= F[B] =
-    witness[F[A], F[B]](p => contradicts(F.proof(p)))
+    witness[F[A], F[B]](p => apply(F(p)))
+
+  /**
+    * Classical proof that
+    * ¬(a ~ b) ⟺ a ≸ b ⋁ b < a ⋁ a < b
+    */
+  def decompose: ¬¬[(B </< A) Either (A </< B) Either (A >~< B)] =
+    Inhabited.lem[A <~< B].flatMap {
+      case Right(lte) => Inhabited.value(Left(Right(StrictAs.witness(self, lte))))
+      case Left(notLTE) =>
+        Inhabited.lem[B <~< A].map {
+          case Right(gte) => Left(Left(StrictAs.witness(self.flip, gte)))
+          case Left(notGTE) => Right(Incomparable.witness(notLTE, notGTE))
+        }
+    }
 }
 object WeakApart {
-  private[this] final class Witness[A, B](nab: (A === B) => Void) extends WeakApart[A, B] {
-    def proof[F[_]](f: F[A] === F[B]): Constant[F] =
-      Constant.witness[F, A, B](this, f)
-  }
-
   def apply[A, B](implicit ev: WeakApart[A, B]): WeakApart[A, B] = ev
 
   implicit def proposition[A, B]: Proposition[WeakApart[A, B]] =
-    Proposition.force[WeakApart[A, B]](Unsafe.unsafe)
+    Proposition.negation[A === B].isomap(Iso.unsafe(x => new WeakApart(x), _.run))
 
   implicit def inhabited[A, B](implicit A: Inhabited[A === B]): Uninhabited[A =!= B] =
-    Uninhabited.witness(nab => A.contradicts(ab => nab.contradicts(ab)))
+    Uninhabited.witness(nab => A.contradicts(ab => nab.apply(ab)))
 
   implicit def uninhabited[A, B](implicit na: Uninhabited[A === B]): Inhabited[A =!= B] =
     Inhabited.value(witness(na.contradicts))
@@ -95,11 +99,13 @@ object WeakApart {
     * Inequality is an irreflexive relation.
     */
   def irreflexive[A](ev: A =!= A): Void =
-    ev.contradicts(Is.refl[A])
+    ev.apply(Is.refl[A])
 
   def witness[A, B](f: (A === B) => Void): WeakApart[A, B] =
-    new Witness[A, B](f)
+    new WeakApart[A, B](f)
 
-  def force[A, B](implicit unsafe: Unsafe): WeakApart[A, B] =
-    witness(unsafe.void[A === B])
+  private[WeakApart] final class PartialLower[F[_], A, B](val ab: WeakApart[A, B]) extends AnyVal {
+    def apply[X, Y](implicit A: A === F[X], B: B === F[Y]): X =!= Y =
+      WeakApart(xy => ab(A andThen xy.lift[F] andThen B.flip))
+  }
 }
