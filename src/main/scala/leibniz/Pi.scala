@@ -1,14 +1,14 @@
 package leibniz
 
-import cats.~>
+//import cats.~>
 
 trait Pi[-A, F[_]] { fa =>
   def apply(x: A): F[x.type]
 
-  final def mapK[G[_]](fg: F ~> G): Pi[A, G] =
-    new Pi[A, G] {
-      override def apply(a: A): G[a.type] = fg.apply(fa.apply(a))
-    }
+//  final def mapK[G[_]](fg: F ~> G): Pi[A, G] =
+//    new Pi[A, G] {
+//      override def apply(a: A): G[a.type] = fg.apply(fa.apply(a))
+//    }
 
   final def narrow[B <: A]: Pi[B, F] = this
 

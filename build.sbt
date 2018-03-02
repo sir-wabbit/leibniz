@@ -1,4 +1,4 @@
-addCompilerPlugin("org.scalamacros" % "paradise_2.12.4" % "2.1.0")
+//addCompilerPlugin("org.scalamacros" % "paradise_2.12.4" % "2.1.0")
 
 autoCompilerPlugins := true
 
@@ -15,7 +15,7 @@ val catsLibraries = List(
 lazy val commonSettings = List(
   addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.4"),
   organization      := "com.alexknvl",
-  version           := "0.12.0-SNAPSHOT",
+  version           := "0.13.0-SNAPSHOT",
   scalaVersion      := "2.12.4-bin-typelevel-4",
   scalaOrganization := "org.typelevel",
   licenses += ("MIT", url("http://opensource.org/licenses/MIT")),
@@ -68,7 +68,7 @@ lazy val leibnizMacros = (project in file("./macros/"))
 lazy val root = (project in file("."))
   .settings(name := "leibniz")
   .settings(commonSettings: _*)
-  .settings(libraryDependencies ++= catsLibraries)
+//  .settings(libraryDependencies ++= catsLibraries)
   .settings(libraryDependencies ++= Seq(
     scalaOrganization.value % "scala-compiler" % scalaVersion.value,
     "org.typelevel" %% "macro-compat" % macroCompatVersion))

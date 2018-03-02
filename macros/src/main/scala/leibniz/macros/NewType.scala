@@ -14,6 +14,8 @@ private[macros] object NewTypeMacros {
 
     import c.universe._
 
+    import definitions.{ AnyTpe, AnyRefTpe, NullTpe, NothingTpe }
+
     def fail(msg: String) = c.abort(c.enclosingPosition, msg)
 
     def run() = annottees match {
@@ -66,26 +68,15 @@ private[macros] object NewTypeMacros {
             }
           """
         )
-//
-//        val coercibleInstances = List(
-//          q"@inline implicit def unsafeWrap: $CoercibleCls[Repr, Type] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeUnwrap: $CoercibleCls[Type, Repr] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeWrapM[M[_]]: $CoercibleCls[M[Repr], M[Type]] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeUnwrapM[M[_]]: $CoercibleCls[M[Type], M[Repr]] = $CoercibleObj.instance",
-//          // Avoid ClassCastException with Array types by prohibiting Array coercing.
-//          q"@inline implicit def cannotWrapArrayAmbiguous1: $CoercibleCls[Array[Repr], Array[Type]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotWrapArrayAmbiguous2: $CoercibleCls[Array[Repr], Array[Type]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotUnwrapArrayAmbiguous1: $CoercibleCls[Array[Type], Array[Repr]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotUnwrapArrayAmbiguous2: $CoercibleCls[Array[Type], Array[Repr]] = $CoercibleObj.instance"
-//        )
 
         q"""
           type $typeName = ${typeName.toTermName}.Type
           object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
             ..$objDefs
             type Repr = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag
+            type Base >: ${ if (NullTpe <:< valDef.tpt.tpe) NullTpe else NothingTpe }
+                      <: ${ if (valDef.tpt.tpe <:< AnyRefTpe) AnyRefTpe else AnyTpe }
+            trait Tag extends ${ if (valDef.tpt.tpe <:< AnyRefTpe) AnyRefTpe else AnyTpe }
             type Type = Base with Tag
             ..$maybeApplyMethod
             ..$maybeOpsDef
@@ -120,26 +111,15 @@ private[macros] object NewTypeMacros {
             }
           """
         )
-//
-//        val coercibleInstances = List[Tree](
-//          q"@inline implicit def unsafeWrap[..$tparamsNoVar]: $CoercibleCls[Repr[..$tparamNames], Type[..$tparamNames]] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeUnwrap[..$tparamsNoVar]: $CoercibleCls[Type[..$tparamNames], Repr[..$tparamNames]] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeWrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Repr[..$tparamNames]], M[Type[..$tparamNames]]] = $CoercibleObj.instance",
-//          q"@inline implicit def unsafeUnwrapM[M[_], ..$tparamsNoVar]: $CoercibleCls[M[Type[..$tparamNames]], M[Repr[..$tparamNames]]] = $CoercibleObj.instance",
-//          // Avoid ClassCastException with Array types by prohibiting Array coercing.
-//          q"@inline implicit def cannotWrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[Array[Repr[..$tparamNames]], Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotWrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[Array[Repr[..$tparamNames]], Array[Type[..$tparamNames]]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotUnwrapArrayAmbiguous1[..$tparamsNoVar]: $CoercibleCls[Array[Type[..$tparamNames]], Array[Repr[..$tparamNames]]] = $CoercibleObj.instance",
-//          q"@inline implicit def cannotUnwrapArrayAmbiguous2[..$tparamsNoVar]: $CoercibleCls[Array[Type[..$tparamNames]], Array[Repr[..$tparamNames]]] = $CoercibleObj.instance"
-//        )
 
         q"""
           type $typeName[..$tparams] = ${typeName.toTermName}.Type[..$tparamNames]
           object $objName extends { ..$objEarlyDefs } with ..$objParents { $objSelf =>
             ..$objDefs
             type Repr[..$tparams] = ${valDef.tpt}
-            type Base = { type $baseRefinementName }
-            trait Tag[..$tparams]
+            type Base >: ${ if (NullTpe <:< valDef.tpt.tpe) NullTpe else NothingTpe }
+                      <: ${ if (valDef.tpt.tpe <:< AnyRefTpe) AnyRefTpe else AnyTpe }
+            trait Tag[..$tparamNames] extends ${ if (valDef.tpt.tpe <:< AnyRefTpe) AnyRefTpe else AnyTpe }
             type Type[..$tparams] = Base with Tag[..$tparamNames]
             ..$maybeApplyMethod
             ..$maybeOpsDef

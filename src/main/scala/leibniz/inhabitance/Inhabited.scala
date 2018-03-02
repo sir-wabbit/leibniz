@@ -1,7 +1,7 @@
 package leibniz
 package inhabitance
 
-import cats.Functor
+//import cats.Functor
 import leibniz.macros.newtype
 
 /**

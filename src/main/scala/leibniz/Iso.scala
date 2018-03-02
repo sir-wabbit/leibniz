@@ -4,14 +4,14 @@ trait Iso[A, B] { ab =>
   def to(a: A): B
   def from(b: B): A
 
-  def substCoF[F[_]](fa: F[A])(implicit F: cats.Functor[F]): F[B] =
-    F.map(fa)(to)
-
-  def substCtF[F[_]](fa: F[A])(implicit F: cats.functor.Contravariant[F]): F[B] =
-    F.contramap(fa)(from)
-
-  def substF[F[_]](fa: F[A])(implicit F: cats.functor.Invariant[F]): F[B] =
-    F.imap(fa)(to)(from)
+//  def substCoF[F[_]](fa: F[A])(implicit F: cats.Functor[F]): F[B] =
+//    F.map(fa)(to)
+//
+//  def substCtF[F[_]](fa: F[A])(implicit F: cats.functor.Contravariant[F]): F[B] =
+//    F.contramap(fa)(from)
+//
+//  def substF[F[_]](fa: F[A])(implicit F: cats.functor.Invariant[F]): F[B] =
+//    F.imap(fa)(to)(from)
 
   def andThen[C](bc: Iso[B, C]): Iso[A, C] = new Iso[A, C] {
     def to(a: A): C = bc.to(ab.to(a))
@@ -20,20 +20,20 @@ trait Iso[A, B] { ab =>
 
   def compose[Z](za: Iso[Z, A]): Iso[Z, B] = za.andThen(ab)
 
-  def liftCoF[F[_]](implicit F: cats.Functor[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
-    def to(fa: F[A]): F[B] = F.map(fa)(ab.to)
-    def from(fb: F[B]): F[A] = F.map(fb)(ab.from)
-  }
-
-  def liftCtF[F[_]](implicit F: cats.functor.Contravariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
-    def to(fa: F[A]): F[B] = F.contramap(fa)(ab.from)
-    def from(fb: F[B]): F[A] = F.contramap(fb)(ab.to)
-  }
-
-  def liftInvF[F[_]](implicit F: cats.functor.Invariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
-    def to(fa: F[A]): F[B] = F.imap(fa)(ab.to)(ab.from)
-    def from(fb: F[B]): F[A] = F.imap(fb)(ab.from)(ab.to)
-  }
+//  def liftCoF[F[_]](implicit F: cats.Functor[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+//    def to(fa: F[A]): F[B] = F.map(fa)(ab.to)
+//    def from(fb: F[B]): F[A] = F.map(fb)(ab.from)
+//  }
+//
+//  def liftCtF[F[_]](implicit F: cats.functor.Contravariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+//    def to(fa: F[A]): F[B] = F.contramap(fa)(ab.from)
+//    def from(fb: F[B]): F[A] = F.contramap(fb)(ab.to)
+//  }
+//
+//  def liftInvF[F[_]](implicit F: cats.functor.Invariant[F]): Iso[F[A], F[B]] = new Iso[F[A], F[B]] {
+//    def to(fa: F[A]): F[B] = F.imap(fa)(ab.to)(ab.from)
+//    def from(fb: F[B]): F[A] = F.imap(fb)(ab.from)(ab.to)
+//  }
 
   def flip: Iso[B, A] = new Iso[B, A] {
     def to(b: B): A = ab.from(b)

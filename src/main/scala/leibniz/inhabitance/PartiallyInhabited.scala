@@ -1,6 +1,6 @@
 package leibniz.inhabitance
 
-import cats.~>
+//import cats.~>
 import leibniz.variance.{Constant, Injective}
 import leibniz.{=!=, WeakApart}
 
@@ -47,8 +47,8 @@ sealed abstract class PartiallyInhabited[F[_]] {
     * `G[Positive]` and negative `F[Negative]` into `G[Negative]`.
     * This implies that [[G]] is partially inhabited as well.
     */
-  def imap[G[_]](to: F ~> G, from: G ~> F): PartiallyInhabited[G] =
-    witness[G, Positive, Negative](positive.map(to.apply), negative.contramap(from.apply))
+//  def imap[G[_]](to: F ~> G, from: G ~> F): PartiallyInhabited[G] =
+//    witness[G, Positive, Negative](positive.map(to.apply), negative.contramap(from.apply))
 
   def notTotallyInhabited(t: TotallyInhabited[F]): Void =
     negative.notInhabited(t.proof[Negative])
