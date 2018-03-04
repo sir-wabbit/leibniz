@@ -13,6 +13,12 @@ trait WeakProposition[A] {
 object WeakProposition {
   def apply[A](implicit A: WeakProposition[A]): WeakProposition[A] = A
 
+  // This covers Unit & other terminal objects.
+  implicit def singleton[A <: Singleton]: WeakProposition[A] =
+    new WeakProposition[A] { }
+  implicit def unit: WeakProposition[Unit] =
+    new WeakProposition[Unit] { }
+
   // All values are equal.
   implicit def eq[A](implicit prop: WeakProposition[A]): Eq[A] =
     Eq.propositionEq[A]

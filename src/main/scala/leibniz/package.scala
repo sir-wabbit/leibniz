@@ -21,5 +21,11 @@ package object leibniz {
 
   type TypeHolder[T] <: (Unit { type Type = T }) with TypeHolder.Tag
 
-  type |-[A, B] = Implies[A, B]
+  type Implies[A, B] = Implies.Type[A, B]
+  type |-[A, B] = Implies.Type[A, B]
+
+  type Forall[F[_]] = Forall.Type[F]
+  type \-/[F[_]]    = Forall.Type[F]
+
+  type ~>[F[_], G[_]] = FunctionK.Type[F, G]
 }

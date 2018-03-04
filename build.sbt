@@ -1,4 +1,4 @@
-//addCompilerPlugin("org.scalamacros" % "paradise_2.12.4" % "2.1.0")
+addCompilerPlugin("org.scalamacros" % "paradise_2.12.4" % "2.1.0")
 
 autoCompilerPlugins := true
 
