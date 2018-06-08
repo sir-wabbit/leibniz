@@ -11,7 +11,7 @@ a ≡ b = ∀ f .f a → f b
 ```
 
 This library provides an encoding of Leibniz' equality and other related
-concepts in Scala.
+concepts in Scala. See my impromptu [LC 2018](https://alexknvl.com/docs/scalaz_summit_presentation.pdf) presentation for an overview.
 
 ### Witnesses
  * `Is[A, B]` (with a type alias to `A === B`) witnesses that types
@@ -26,6 +26,9 @@ concepts in Scala.
  * `As[A, B]` witnesses that `A` is a subtype of `B`.
  * `As1[A, B]` witnesses that `A` is a subtype of `B` using existential types.
  * `Liskov[L, H, A, B]` is a bounded counterpart to `As[A, B]`.
+ * `Constant[F]` witnesses that HKT `F` is a constant type lambda.
+ * `Injective[F]` witnesses that HKT `F` is injective (not a constant type lambda :smile:)
+ * ...
 
 ## Quick Start
 ```scala
