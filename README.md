@@ -27,8 +27,10 @@ concepts in Scala. See my impromptu [LC 2018](https://alexknvl.com/docs/scalaz_s
  * `As1[A, B]` witnesses that `A` is a subtype of `B` using existential types.
  * `Liskov[L, H, A, B]` is a bounded counterpart to `As[A, B]`.
  * `Constant[F]` witnesses that HKT `F` is a constant type lambda.
- * `Injective[F]` witnesses that HKT `F` is injective (not a constant type lambda :smile:)
- * ...
+ * `Injective[F]` witnesses that HKT `F` is injective (not a constant type lambda :smiley:).
+ * `Covariant[F]` witnessese that HKT `F` is covariant (constant or strictly covariant).
+ * Ditto other typeclasses / propositional types in `variance` package.
+ * See my impromptu [LC 2018](https://alexknvl.com/docs/scalaz_summit_presentation.pdf) presentation for an overview.
 
 ## Quick Start
 ```scala
