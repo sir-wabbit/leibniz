@@ -1,2 +1,2 @@
-addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.1.1")
-addSbtPlugin("me.lessis" % "bintray-sbt" % "0.3.0")
+addSbtPlugin("org.wartremover" % "sbt-wartremover" % "2.3.5")
+addSbtPlugin("org.foundweekends" % "sbt-bintray" % "0.5.4")
